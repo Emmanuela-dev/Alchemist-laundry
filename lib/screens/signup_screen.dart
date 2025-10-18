@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/mock_repo.dart';
+import '../services/local_repo.dart';
+import '../services/supabase_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -18,7 +19,16 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() {
       _loading = true;
     });
-    await MockRepo.instance.signup(_name.text, _email.text, _password.text);
+    if (SupabaseService.instance.ready) {
+      await SupabaseService.instance.signUp(_email.text, _password.text);
+    } else {
+      final user = await LocalRepo.instance.signup(_name.text, _email.text, _password.text);
+      if (!mounted) return;
+  final displayName = (user.name.isNotEmpty) ? user.name : _email.text.split('@').first;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Welcome back, $displayName')));
+      // give the user a moment to see the welcome message
+      await Future.delayed(const Duration(milliseconds: 1200));
+    }
     if (!mounted) return;
     setState(() {
       _loading = false;

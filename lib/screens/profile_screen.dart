@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/mock_repo.dart';
+import '../services/local_repo.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -16,7 +16,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    final u = MockRepo.instance.currentUser;
+  final u = LocalRepo.instance.currentUser;
     if (u != null) {
       _name.text = u.name;
       _phone.text = u.phone;
@@ -25,7 +25,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _save() {
-    final u = MockRepo.instance.currentUser;
+  final u = LocalRepo.instance.currentUser;
     if (u != null) {
       u.name = _name.text;
       u.phone = _phone.text;

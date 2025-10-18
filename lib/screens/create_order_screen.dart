@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../services/mock_repo.dart';
+import '../services/local_repo.dart';
 import '../models/models.dart';
+import '../services/supabase_service.dart';
 
 class CreateOrderScreen extends StatefulWidget {
   const CreateOrderScreen({super.key});
@@ -43,18 +44,29 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     setState(() {
       _loading = true;
     });
-    final items = [OrderItem(name: _itemName.text, quantity: int.tryParse(_quantity.text) ?? 1, price: 2.5)];
-    final order = await MockRepo.instance.createOrder(serviceId: serviceId ?? 's1', items: items, pickup: pickup, delivery: delivery, instructions: _instructions.text);
-    if (!mounted) return;
-    setState(() {
-      _loading = false;
-    });
-    Navigator.pushReplacementNamed(context, '/order', arguments: {'orderId': order.id});
+    final qty = int.tryParse(_quantity.text) ?? 1;
+    final unitPrice = 150.0; // KES per unit example
+    final items = [OrderItem(name: _itemName.text, quantity: qty, price: unitPrice)];
+    final total = items.fold<double>(0, (p, e) => p + e.price * e.quantity);
+
+    if (SupabaseService.instance.ready) {
+      final user = LocalRepo.instance.currentUser;
+      final itemsPayload = items.map((e) => {'name': e.name, 'quantity': e.quantity, 'price': e.price}).toList();
+  final order = await SupabaseService.instance.createOrder(user!.id, serviceId ?? '', itemsPayload, pickup, delivery, _instructions.text, total);
+      if (!mounted) return;
+      setState(() { _loading = false; });
+      Navigator.pushReplacementNamed(context, '/order', arguments: {'orderId': order?['id']});
+    } else {
+  final order = await LocalRepo.instance.createOrder(serviceId: serviceId ?? 's1', items: items, pickup: pickup, delivery: delivery, instructions: _instructions.text);
+      if (!mounted) return;
+      setState(() { _loading = false; });
+      Navigator.pushReplacementNamed(context, '/order', arguments: {'orderId': order.id});
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final service = serviceId != null ? MockRepo.instance.listServices().firstWhere((s) => s.id == serviceId, orElse: () => MockRepo.instance.listServices()[0]) : null;
+  final service = serviceId != null ? LocalRepo.instance.listServices().firstWhere((s) => s.id == serviceId, orElse: () => LocalRepo.instance.listServices()[0]) : null;
     final header = service != null ? Text('Service: ${service.title}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)) : const SizedBox.shrink();
     return Scaffold(
       appBar: AppBar(title: const Text('Create Order')),

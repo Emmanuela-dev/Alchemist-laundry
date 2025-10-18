@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../services/mock_repo.dart';
+import '../services/local_repo.dart';
 import '../models/models.dart';
+import '../services/supabase_service.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -15,8 +16,16 @@ class _OrdersScreenState extends State<OrdersScreen> {
   @override
   void initState() {
     super.initState();
-    final user = MockRepo.instance.currentUser;
-    if (user != null) orders = MockRepo.instance.listUserOrders(user.id);
+  final user = LocalRepo.instance.currentUser;
+    if (user != null) {
+      if (SupabaseService.instance.ready) {
+        SupabaseService.instance.listOrdersForUser(user.id).then((list) => setState(() {
+              orders = list.map((e) => Order(id: e['id'], userId: e['user_id'], serviceId: e['service_id'], items: [], pickupTime: DateTime.tryParse(e['pickup_time'] ?? '') ?? DateTime.now(), deliveryTime: DateTime.tryParse(e['delivery_time'] ?? '') ?? DateTime.now(), instructions: e['instructions'] ?? '', total: (e['total'] as num?)?.toDouble() ?? 0.0)).toList();
+            }));
+      } else {
+        orders = LocalRepo.instance.listUserOrders(user.id);
+      }
+    }
   }
 
   @override
@@ -29,7 +38,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           final o = orders[i];
           return Card(
             child: ListTile(
-              title: Text('Order ${o.id} - \$${o.total.toStringAsFixed(2)}'),
+              title: Text('Order ${o.id} - KES ${o.total.toStringAsFixed(0)}'),
               subtitle: Text('Status: ${o.status.name}'),
               onTap: () => Navigator.pushNamed(context, '/order', arguments: {'orderId': o.id}),
             ),

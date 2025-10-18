@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'services/mock_repo.dart';
+import 'services/local_repo.dart';
+import 'services/supabase_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/home_screen.dart';
@@ -11,8 +12,10 @@ import 'screens/admin_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // initialize mock data
-  await MockRepo.instance.init();
+  // initialize local persistent data
+  await LocalRepo.instance.init();
+  // initialize supabase if configured
+  await SupabaseService.instance.init();
   runApp(const MyApp());
 }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/mock_repo.dart';
+import '../services/local_repo.dart';
+import '../services/supabase_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,7 +18,11 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _loading = true;
     });
-    await MockRepo.instance.login(_email.text, _password.text);
+    if (SupabaseService.instance.ready) {
+      await SupabaseService.instance.signIn(_email.text, _password.text);
+    } else {
+      await LocalRepo.instance.login(_email.text, _password.text);
+    }
     if (!mounted) return;
     setState(() {
       _loading = false;

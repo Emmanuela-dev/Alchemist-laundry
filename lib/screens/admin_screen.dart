@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../services/mock_repo.dart';
+import '../services/local_repo.dart';
 import '../models/models.dart';
+import '../services/supabase_service.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -15,12 +16,13 @@ class _AdminScreenState extends State<AdminScreen> {
   @override
   void initState() {
     super.initState();
-    orders = MockRepo.instance.listAllOrders();
+    // use local repo for admin listing for now
+    orders = LocalRepo.instance.listAllOrders();
   }
 
   void _refresh() {
     setState(() {
-      orders = MockRepo.instance.listAllOrders();
+      orders = LocalRepo.instance.listAllOrders();
     });
   }
 
@@ -34,10 +36,17 @@ class _AdminScreenState extends State<AdminScreen> {
           final o = orders[i];
           return Card(
             child: ListTile(
-              title: Text('Order ${o.id} - \$${o.total.toStringAsFixed(2)}'),
+              title: Text('Order ${o.id} - KES ${o.total.toStringAsFixed(0)}'),
               subtitle: Text('Status: ${o.status.name}'),
               trailing: PopupMenuButton<OrderStatus>(
-                onSelected: (s) async { await MockRepo.instance.updateOrderStatus(o.id, s); _refresh(); },
+                onSelected: (s) async {
+                  if (SupabaseService.instance.ready) {
+                    await SupabaseService.instance.updateOrderStatus(o.id, s.name);
+                    } else {
+                      await LocalRepo.instance.updateOrderStatus(o.id, s);
+                    }
+                  _refresh();
+                },
                 itemBuilder: (ctx) => OrderStatus.values.map((s) => PopupMenuItem(value: s, child: Text(s.name))).toList(),
               ),
               onTap: () => Navigator.pushNamed(context, '/order', arguments: {'orderId': o.id}),

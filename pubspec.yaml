@@ -1,3 +1,5 @@
+
+
 name: flutter_practice
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
@@ -34,7 +36,19 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  flutter_svg: ^2.0.7
+
+  # Local storage for persisting tasks
+  shared_preferences: ^2.2.3
+
+  # For JSON serialization
+  json_annotation: ^4.8.1
+  # Image picker for selecting profile photos from camera/gallery
+  image_picker: ^0.8.7+4
+  # Local notifications for task reminders (temporarily disabled to resolve deps)
+  # flutter_local_notifications: ^7.8.1
+  # timezone: ^0.8.0
+  # Supabase for backend (Auth + Postgres)
+  # supabase_flutter: ^1.10.25
 
 dev_dependencies:
   flutter_test:
@@ -46,6 +60,9 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+
+  # For generating launcher icons
+  flutter_launcher_icons: ^0.13.1
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -59,7 +76,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/logo.svg
+    - assets/images/1.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -91,3 +108,22 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Flutter launcher icons configuration
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/1.png"
+  min_sdk_android: 21
+  web:
+    generate: true
+    image_path: "assets/images/1.png"
+    background_color: "#E8E0F5"
+    theme_color: "#B794F6"
+  windows:
+    generate: true
+    image_path: "assets/images/1.png"
+    icon_size: 48
+  macos:
+    generate: true
+    image_path: "assets/images/1.png"

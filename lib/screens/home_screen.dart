@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../services/mock_repo.dart';
+import '../services/local_repo.dart';
 import '../models/models.dart';
 import '../widgets/logo_widget.dart';
+import '../services/supabase_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,12 +17,16 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    services = MockRepo.instance.listServices();
+    if (SupabaseService.instance.ready) {
+      SupabaseService.instance.listServices().then((r) => setState(() => services = r));
+    } else {
+      services = LocalRepo.instance.listServices();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = MockRepo.instance.currentUser;
+  final user = LocalRepo.instance.currentUser;
     return Scaffold(
       appBar: AppBar(title: const Text('Laundry Home'), actions: [
         IconButton(onPressed: () => Navigator.pushNamed(context, '/orders'), icon: const Icon(Icons.history)),
@@ -48,7 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: ListTile(
                     title: Text(s.title),
                     subtitle: Text(s.description),
-                    trailing: Text('\$${s.basePrice.toStringAsFixed(2)}'),
+                    trailing: Text('KES ${s.basePrice.toStringAsFixed(0)}'),
                     onTap: () => Navigator.pushNamed(context, '/create-order', arguments: {'serviceId': s.id}),
                   ),
                 );
