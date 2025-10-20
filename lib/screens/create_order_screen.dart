@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import '../services/local_repo.dart';
 import '../models/models.dart';
-import '../services/supabase_service.dart';
+import '../services/firebase_service.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../services/admin_numbers.dart';
+import '../services/sms_config.dart';
 
 class CreateOrderScreen extends StatefulWidget {
   const CreateOrderScreen({super.key});
@@ -47,20 +51,71 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     final qty = int.tryParse(_quantity.text) ?? 1;
     final unitPrice = 150.0; // KES per unit example
     final items = [OrderItem(name: _itemName.text, quantity: qty, price: unitPrice)];
-    final total = items.fold<double>(0, (p, e) => p + e.price * e.quantity);
+  // total computed in LocalRepo.createOrder
 
-    if (SupabaseService.instance.ready) {
-      final user = LocalRepo.instance.currentUser;
-      final itemsPayload = items.map((e) => {'name': e.name, 'quantity': e.quantity, 'price': e.price}).toList();
-  final order = await SupabaseService.instance.createOrder(user!.id, serviceId ?? '', itemsPayload, pickup, delivery, _instructions.text, total);
+    // Attempt to get current location (best-effort)
+    double? lat;
+    double? lng;
+    try {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        final req = await Geolocator.requestPermission();
+        if (req == LocationPermission.denied) {
+          // user denied, continue without location
+        }
+      }
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (serviceEnabled) {
+        final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.best);
+        lat = pos.latitude;
+        lng = pos.longitude;
+      }
+    } catch (e) {
+      // ignore location errors; proceed without coords
+    }
+
+    if (FirebaseService.instance.ready) {
+      final user = FirebaseService.instance.auth.currentUser;
+      final doc = await FirebaseService.instance.createOrder({
+        'userId': user?.uid ?? LocalRepo.instance.currentUser?.id,
+        'serviceId': serviceId ?? 's1',
+        'items': items.map((e) => {'name': e.name, 'quantity': e.quantity, 'price': e.price}).toList(),
+        'pickupTime': pickup.toIso8601String(),
+        'deliveryTime': delivery.toIso8601String(),
+        'instructions': _instructions.text,
+        'total': items.fold<double>(0, (p, e) => p + e.price * e.quantity) + (LocalRepo.instance.listServices().firstWhere((s) => s.id == (serviceId ?? 's1')).basePrice),
+        'latitude': lat,
+        'longitude': lng,
+        'status': 'pending',
+        'placedAt': DateTime.now().toIso8601String(),
+      });
       if (!mounted) return;
       setState(() { _loading = false; });
-      Navigator.pushReplacementNamed(context, '/order', arguments: {'orderId': order?['id']});
+      Navigator.pushReplacementNamed(context, '/order', arguments: {'orderId': doc.id});
+      // After creating the order in Firestore, open WhatsApp to primary admin
+      _openWhatsAppToPrimaryAdmin(doc.id, items, serviceId, orderTotal: items.fold<double>(0, (p, e) => p + e.price * e.quantity));
     } else {
-  final order = await LocalRepo.instance.createOrder(serviceId: serviceId ?? 's1', items: items, pickup: pickup, delivery: delivery, instructions: _instructions.text);
+      final order = await LocalRepo.instance.createOrder(serviceId: serviceId ?? 's1', items: items, pickup: pickup, delivery: delivery, instructions: _instructions.text, latitude: lat, longitude: lng);
       if (!mounted) return;
       setState(() { _loading = false; });
       Navigator.pushReplacementNamed(context, '/order', arguments: {'orderId': order.id});
+      // After creating the local order, open WhatsApp to primary admin
+      _openWhatsAppToPrimaryAdmin(order.id, items, serviceId, orderTotal: items.fold<double>(0, (p, e) => p + e.price * e.quantity));
+    }
+  }
+
+  Future<void> _openWhatsAppToPrimaryAdmin(String orderId, List<OrderItem> items, String? serviceId, {required double orderTotal}) async {
+    final admins = await AdminNumbers.load();
+    final targets = admins.isNotEmpty ? admins : SmsConfig.adminNumbers;
+    if (targets.isEmpty) return; // nothing to do
+    final phone = targets.first.replaceAll('+', '');
+    final user = LocalRepo.instance.currentUser;
+    final serviceTitle = LocalRepo.instance.listServices().firstWhere((s) => s.id == (serviceId ?? 's1')).title;
+    final itemsText = items.map((i) => '${i.name} x${i.quantity}').join(', ');
+    final msg = 'New order $orderId\nCustomer: ${user?.name ?? ''} ${user?.phone ?? ''}\nService: $serviceTitle\nItems: $itemsText\nTotal: KES ${orderTotal.toStringAsFixed(0)}';
+    final url = Uri.parse('https://wa.me/$phone?text=${Uri.encodeComponent(msg)}');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
     }
   }
 

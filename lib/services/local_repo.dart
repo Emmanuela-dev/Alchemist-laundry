@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
+import 'notification_service.dart';
+import 'sms_service.dart';
 
 class LocalRepo {
   LocalRepo._private();
@@ -28,14 +30,22 @@ class LocalRepo {
       }
     } else {
       // seed
-      final s1 = Service(id: 's1', title: 'Wash & Fold', description: 'Wash and fold per kg', basePrice: 150);
+      final s1 = Service(id: 's1', title: 'Wash & Fold', description: 'Wash and fold per laundry basket', basePrice: 300);
       final s2 = Service(id: 's2', title: 'Dry Cleaning', description: 'Dry clean per item', basePrice: 300);
-      final s3 = Service(id: 's3', title: 'Ironing / Pressing', description: 'Per item ironing', basePrice: 80);
-      final s4 = Service(id: 's4', title: 'Pickup & Delivery', description: 'Pickup and delivery service', basePrice: 200);
+      final s3 = Service(id: 's3', title: 'Ironing / Pressing', description: 'Per item ironing', basePrice: 50);
+      final s4 = Service(id: 's4', title: 'Pickup & Delivery', description: 'Pickup and delivery service', basePrice: 0);
+      final s5 = Service(id: 's4', title: 'Duvet', description:'Duvet based on sizes', basePrice: 200-350);
+      final s6 = Service(id: 's6', title: 'Blankets', description: 'Washing normal blankets', basePrice: 150);
+      final s7 = Service(id: 's7', title: 'Shoes', description: 'Wash all types of shoes', basePrice: 50);
+      final s8 = Service(id: 's8', title: 'House Cleaning', description: 'General House Cleaning', basePrice: 1200);
       _services[s1.id] = s1;
       _services[s2.id] = s2;
       _services[s3.id] = s3;
       _services[s4.id] = s4;
+      _services[s5.id] = s5;
+      _services[s6.id] = s6;
+      _services[s7.id] = s7;
+      _services[s8.id] = s8;
       await _saveServices();
     }
 
@@ -67,7 +77,7 @@ class LocalRepo {
           final im = it as Map<String, dynamic>;
           items.add(OrderItem(name: im['name'], quantity: im['quantity'], price: (im['price'] as num).toDouble()));
         }
-        final o = Order(id: m['id'], userId: m['userId'], serviceId: m['serviceId'], items: items, pickupTime: DateTime.parse(m['pickupTime']), deliveryTime: DateTime.parse(m['deliveryTime']), instructions: m['instructions'] ?? '', status: OrderStatus.values.firstWhere((v) => v.name == m['status']), total: (m['total'] as num).toDouble());
+        final o = Order(id: m['id'], userId: m['userId'], serviceId: m['serviceId'], items: items, pickupTime: DateTime.parse(m['pickupTime']), deliveryTime: DateTime.parse(m['deliveryTime']), instructions: m['instructions'] ?? '', status: OrderStatus.values.firstWhere((v) => v.name == m['status']), total: (m['total'] as num).toDouble(), latitude: (m['latitude'] as num?)?.toDouble(), longitude: (m['longitude'] as num?)?.toDouble());
         _orders[o.id] = o;
       }
     }
@@ -108,6 +118,8 @@ class LocalRepo {
       'instructions': o.instructions,
       'status': o.status.name,
       'total': o.total,
+      'latitude': o.latitude,
+      'longitude': o.longitude,
     }).toList();
     await _prefs.setString('orders', jsonEncode(list));
   }
@@ -144,14 +156,22 @@ class LocalRepo {
   List<Service> listServices() => _services.values.toList();
 
   // Orders
-  Future<Order> createOrder({required String serviceId, required List<OrderItem> items, required DateTime pickup, required DateTime delivery, String instructions = ''}) async {
+  Future<Order> createOrder({required String serviceId, required List<OrderItem> items, required DateTime pickup, required DateTime delivery, String instructions = '', double? latitude, double? longitude}) async {
     final id = DateTime.now().microsecondsSinceEpoch.toString();
     final total = items.fold<double>(0, (p, e) => p + e.price * e.quantity) + (_services[serviceId]?.basePrice ?? 0);
-    final order = Order(id: id, userId: _currentUser!.id, serviceId: serviceId, items: items, pickupTime: pickup, deliveryTime: delivery, instructions: instructions, total: total);
+    final order = Order(id: id, userId: _currentUser!.id, serviceId: serviceId, items: items, pickupTime: pickup, deliveryTime: delivery, instructions: instructions, total: total, latitude: latitude, longitude: longitude);
     _orders[id] = order;
     _comments[id] = [];
     await _saveOrders();
     await _saveComments();
+    // Notify admins via SMS (best-effort). Uses SmsConfig.enabled to decide.
+    try {
+      final user = _users[_currentUser!.id];
+      final msg = 'New order ${order.id} from ${user?.name ?? 'unknown'} (${user?.phone ?? user?.email ?? ''}). Total KES ${order.total.toStringAsFixed(0)}.';
+      await SmsService.instance.notifyAdmins(msg);
+    } catch (e) {
+      // ignore SMS failures in local repo
+    }
     return order;
   }
 
@@ -164,6 +184,12 @@ class LocalRepo {
     if (o != null) {
       o.status = status;
       await _saveOrders();
+      // Notify user when their order becomes ready
+      if (status == OrderStatus.ready) {
+        final title = 'Your laundry is ready';
+        final body = 'Order ${o.id} is ready for pickup/delivery.';
+        await NotificationService.instance.showOrderReady(o.id, title, body);
+      }
     }
   }
 

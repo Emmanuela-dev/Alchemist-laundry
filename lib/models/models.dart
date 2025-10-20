@@ -1,5 +1,7 @@
 enum OrderStatus { pending, pickedUp, inWashing, ready, outForDelivery, delivered }
 
+enum PaymentStatus { pending, processing, completed, failed, cancelled, refunded }
+
 class UserProfile {
   final String id;
   String name;
@@ -48,6 +50,8 @@ class Order {
   String instructions;
   OrderStatus status;
   final double total;
+  final double? latitude;
+  final double? longitude;
 
   Order({
     required this.id,
@@ -59,6 +63,8 @@ class Order {
     this.instructions = '',
     this.status = OrderStatus.pending,
     required this.total,
+    this.latitude,
+    this.longitude,
   });
 }
 
@@ -78,4 +84,58 @@ class Comment {
     this.rating = 5,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
+}
+
+class Payment {
+  final String id;
+  final String orderId;
+  final String userId;
+  final double amount;
+  final String phoneNumber;
+  final PaymentStatus status;
+  final String? mpesaReceiptNumber;
+  final String? transactionId;
+  final DateTime createdAt;
+  final DateTime? completedAt;
+  final String? failureReason;
+
+  Payment({
+    required this.id,
+    required this.orderId,
+    required this.userId,
+    required this.amount,
+    required this.phoneNumber,
+    this.status = PaymentStatus.pending,
+    this.mpesaReceiptNumber,
+    this.transactionId,
+    DateTime? createdAt,
+    this.completedAt,
+    this.failureReason,
+  }) : createdAt = createdAt ?? DateTime.now();
+}
+
+class MpesaTransaction {
+  final String merchantRequestId;
+  final String checkoutRequestId;
+  final String responseCode;
+  final String responseDescription;
+  final String customerMessage;
+
+  MpesaTransaction({
+    required this.merchantRequestId,
+    required this.checkoutRequestId,
+    required this.responseCode,
+    required this.responseDescription,
+    required this.customerMessage,
+  });
+
+  factory MpesaTransaction.fromJson(Map<String, dynamic> json) {
+    return MpesaTransaction(
+      merchantRequestId: json['MerchantRequestID'] ?? '',
+      checkoutRequestId: json['CheckoutRequestID'] ?? '',
+      responseCode: json['ResponseCode'] ?? '',
+      responseDescription: json['ResponseDescription'] ?? '',
+      customerMessage: json['CustomerMessage'] ?? '',
+    );
+  }
 }

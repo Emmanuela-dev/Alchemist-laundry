@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/local_repo.dart';
-import '../services/supabase_service.dart';
+import '../services/firebase_service.dart';
+// Supabase removed; using LocalRepo/Firebase for auth in prototype
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -19,12 +20,16 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() {
       _loading = true;
     });
-    if (SupabaseService.instance.ready) {
-      await SupabaseService.instance.signUp(_email.text, _password.text);
+    if (FirebaseService.instance.ready) {
+      final cred = await FirebaseService.instance.signUp(_email.text.trim(), _password.text.trim());
+      final uid = cred.user?.uid;
+      if (uid != null) {
+        await FirebaseService.instance.createUserDoc(uid, {'name': _name.text.trim(), 'email': _email.text.trim(), 'phone': ''});
+      }
     } else {
       final user = await LocalRepo.instance.signup(_name.text, _email.text, _password.text);
       if (!mounted) return;
-  final displayName = (user.name.isNotEmpty) ? user.name : _email.text.split('@').first;
+      final displayName = (user.name.isNotEmpty) ? user.name : _email.text.split('@').first;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Welcome back, $displayName')));
       // give the user a moment to see the welcome message
       await Future.delayed(const Duration(milliseconds: 1200));

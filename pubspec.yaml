@@ -44,9 +44,27 @@ dependencies:
   json_annotation: ^4.8.1
   # Image picker for selecting profile photos from camera/gallery
   image_picker: ^0.8.7+4
+  # Location
+  geolocator: ^9.0.2
+  # Local notifications so clients get notified when their clothes are ready
+  # flutter_local_notifications: ^19.5.0
+  # HTTP client for sending SMS via external APIs (e.g., Twilio)
+  http: ^1.2.1
+  url_launcher: ^6.1.10
+  # M-Pesa integration (temporarily disabled — package not found on pub.dev)
+  # mpesa_flutter_sdk: ^3.0.0
+  # For handling phone number formatting and validation
+  # phone_number: ^1.0.0
+  flutter_map: ^8.2.2
+  latlong2: ^0.9.1
+  # Firebase removed temporarily to avoid web compile errors. Re-add when
+  # targeting mobile with matching firebase plugin versions and web setup.
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.5.0
   # Local notifications for task reminders (temporarily disabled to resolve deps)
-  # flutter_local_notifications: ^7.8.1
-  # timezone: ^0.8.0
+  flutter_local_notifications: ^19.5.0
+  timezone: ^0.10.1
   # Supabase for backend (Auth + Postgres)
   # supabase_flutter: ^1.10.25
 
@@ -77,6 +95,7 @@ flutter:
 
   assets:
     - assets/images/1.png
+    - assets/images/washing_machine.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

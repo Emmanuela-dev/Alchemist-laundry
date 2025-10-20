@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/local_repo.dart';
-import '../services/supabase_service.dart';
+import '../services/firebase_service.dart';
+// Supabase removed; using LocalRepo/Firebase for auth in prototype
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,8 +19,8 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _loading = true;
     });
-    if (SupabaseService.instance.ready) {
-      await SupabaseService.instance.signIn(_email.text, _password.text);
+    if (FirebaseService.instance.ready) {
+      await FirebaseService.instance.signIn(_email.text.trim(), _password.text.trim());
     } else {
       await LocalRepo.instance.login(_email.text, _password.text);
     }

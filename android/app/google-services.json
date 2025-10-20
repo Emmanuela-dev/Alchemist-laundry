@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "145197792263",
+    "project_id": "alchemistlaundry",
+    "storage_bucket": "alchemistlaundry.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:145197792263:android:e5fcd69a9aa13f3f8efea2",
+        "android_client_info": {
+          "package_name": "com.example.flutter_practice"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBNpiouu-yqXhC_nX3qU-hB3h15DpTtNyE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

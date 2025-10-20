@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/local_repo.dart';
 import '../models/models.dart';
-import '../services/supabase_service.dart';
+// Supabase removed; using LocalRepo for orders in prototype
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -18,13 +18,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     super.initState();
   final user = LocalRepo.instance.currentUser;
     if (user != null) {
-      if (SupabaseService.instance.ready) {
-        SupabaseService.instance.listOrdersForUser(user.id).then((list) => setState(() {
-              orders = list.map((e) => Order(id: e['id'], userId: e['user_id'], serviceId: e['service_id'], items: [], pickupTime: DateTime.tryParse(e['pickup_time'] ?? '') ?? DateTime.now(), deliveryTime: DateTime.tryParse(e['delivery_time'] ?? '') ?? DateTime.now(), instructions: e['instructions'] ?? '', total: (e['total'] as num?)?.toDouble() ?? 0.0)).toList();
-            }));
-      } else {
-        orders = LocalRepo.instance.listUserOrders(user.id);
-      }
+      orders = LocalRepo.instance.listUserOrders(user.id);
     }
   }
 
