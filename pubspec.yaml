@@ -62,8 +62,8 @@ dependencies:
   firebase_core: ^3.6.0
   firebase_auth: ^5.3.1
   cloud_firestore: ^5.5.0
-  # Local notifications for task reminders (temporarily disabled to resolve deps)
-  flutter_local_notifications: ^19.5.0
+  # Local notifications removed to avoid Android build/plugin issues
+  # flutter_local_notifications: ^19.5.0
   timezone: ^0.10.1
   # Supabase for backend (Auth + Postgres)
   # supabase_flutter: ^1.10.25
