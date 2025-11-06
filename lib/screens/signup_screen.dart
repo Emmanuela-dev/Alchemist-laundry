@@ -20,25 +20,39 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() {
       _loading = true;
     });
-    if (FirebaseService.instance.ready) {
-      final cred = await FirebaseService.instance.signUp(_email.text.trim(), _password.text.trim());
-      final uid = cred.user?.uid;
-      if (uid != null) {
-        await FirebaseService.instance.createUserDoc(uid, {'name': _name.text.trim(), 'email': _email.text.trim(), 'phone': ''});
+    try {
+      if (FirebaseService.instance.ready) {
+        final cred = await FirebaseService.instance.signUp(_email.text.trim(), _password.text.trim());
+        final uid = cred.user?.uid;
+        if (uid != null) {
+          await FirebaseService.instance.createUserDoc(uid, {'name': _name.text.trim(), 'email': _email.text.trim(), 'phone': ''});
+        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Account created successfully!')),
+        );
+      } else {
+        final user = await LocalRepo.instance.signup(_name.text, _email.text, _password.text);
+        if (!mounted) return;
+        final displayName = (user.name.isNotEmpty) ? user.name : _email.text.split('@').first;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Welcome back, $displayName')));
+        // give the user a moment to see the welcome message
+        await Future.delayed(const Duration(milliseconds: 1200));
       }
-    } else {
-      final user = await LocalRepo.instance.signup(_name.text, _email.text, _password.text);
       if (!mounted) return;
-      final displayName = (user.name.isNotEmpty) ? user.name : _email.text.split('@').first;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Welcome back, $displayName')));
-      // give the user a moment to see the welcome message
-      await Future.delayed(const Duration(milliseconds: 1200));
+      Navigator.pushReplacementNamed(context, '/login');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Signup failed: ${e.toString()}')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
     }
-    if (!mounted) return;
-    setState(() {
-      _loading = false;
-    });
-    Navigator.pushReplacementNamed(context, '/home');
   }
 
   @override

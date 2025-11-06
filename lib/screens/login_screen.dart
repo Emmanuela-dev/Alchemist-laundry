@@ -19,16 +19,26 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _loading = true;
     });
-    if (FirebaseService.instance.ready) {
-      await FirebaseService.instance.signIn(_email.text.trim(), _password.text.trim());
-    } else {
-      await LocalRepo.instance.login(_email.text, _password.text);
+    try {
+      if (FirebaseService.instance.ready) {
+        await FirebaseService.instance.signIn(_email.text.trim(), _password.text.trim());
+      } else {
+        await LocalRepo.instance.login(_email.text, _password.text);
+      }
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/home');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login failed: ${e.toString()}')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
     }
-    if (!mounted) return;
-    setState(() {
-      _loading = false;
-    });
-    Navigator.pushReplacementNamed(context, '/home');
   }
 
   @override

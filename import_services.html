@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import Services to Firebase</title>
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // TODO: Add SDKs for Firebase products that you want to use
+        // https://firebase.google.com/docs/web/setup#available-libraries
+
+        // Your web app's Firebase configuration
+        // REPLACE THIS WITH YOUR FIREBASE CONFIG FROM FIREBASE CONSOLE
+        const firebaseConfig = {
+  apiKey: "AIzaSyD502Gip1xyrnQ7fS_rxYWrIUNQBDLqse4",
+  authDomain: "alchemistlaundry.firebaseapp.com",
+  projectId: "alchemistlaundry",
+  storageBucket: "alchemistlaundry.firebasestorage.app",
+  messagingSenderId: "145197792263",
+  appId: "1:145197792263:web:726a542b0dd22fa68efea2"
+};
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Services data
+        const servicesData = [
+            {
+                "title": "Wash & Fold Laundry",
+                "description": "Professional washing, drying, and folding service for everyday clothes. Perfect for t-shirts, jeans, underwear, and casual wear.",
+                "basePrice": 250,
+                "imageUrl": "https://images.unsplash.com/photo-1582735689369-4fe89db7114c?w=400&h=300&fit=crop"
+            },
+            {
+                "title": "Dry Cleaning Service",
+                "description": "Specialized dry cleaning for delicate fabrics, suits, dresses, and formal wear. Gentle cleaning that preserves fabric quality.",
+                "basePrice": 600,
+                "imageUrl": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop"
+            },
+            {
+                "title": "Ironing & Pressing",
+                "description": "Professional ironing and pressing service for shirts, trousers, skirts, and any wrinkled garments. Crisp and neat finish guaranteed.",
+                "basePrice": 150,
+                "imageUrl": "https://images.unsplash.com/photo-1521656693074-0ef32e80a5d5?w=400&h=300&fit=crop"
+            },
+            {
+                "title": "Carpet & Rug Cleaning",
+                "description": "Deep cleaning service for carpets, rugs, and upholstery. Removes stains, dust, and allergens for a fresh, clean home.",
+                "basePrice": 800,
+                "imageUrl": "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop"
+            },
+            {
+                "title": "Curtain Cleaning",
+                "description": "Professional cleaning for all types of curtains and drapes. Removes dust, stains, and odors while preserving fabric integrity.",
+                "basePrice": 400,
+                "imageUrl": "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=300&fit=crop"
+            },
+            {
+                "title": "Shoe Cleaning & Polishing",
+                "description": "Professional shoe cleaning, polishing, and restoration service. Makes your shoes look brand new with our expert care.",
+                "basePrice": 300,
+                "imageUrl": "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=300&fit=crop"
+            },
+            {
+                "title": "Leather Care Service",
+                "description": "Specialized cleaning and conditioning for leather jackets, bags, belts, and furniture. Restores and protects leather items.",
+                "basePrice": 700,
+                "imageUrl": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=300&fit=crop"
+            },
+            {
+                "title": "Wedding Dress Cleaning",
+                "description": "Expert cleaning and preservation for wedding dresses and special occasion gowns. Careful handling of delicate fabrics.",
+                "basePrice": 1500,
+                "imageUrl": "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&h=300&fit=crop"
+            }
+        ];
+
+        // Function to import services
+        async function importServices() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = 'Importing services...';
+
+            try {
+                for (const service of servicesData) {
+                    await addDoc(collection(db, "services"), service);
+                    console.log(`Added service: ${service.title}`);
+                }
+                statusDiv.textContent = '✅ All services imported successfully!';
+                statusDiv.style.color = 'green';
+            } catch (error) {
+                console.error('Error importing services:', error);
+                statusDiv.textContent = `❌ Error: ${error.message}`;
+                statusDiv.style.color = 'red';
+            }
+        }
+
+        // Make function available globally
+        window.importServices = importServices;
+    </script>
+</head>
+<body>
+    <h1>Import Laundry Services to Firebase</h1>
+    <p>This page will import 8 laundry services with images, descriptions, and prices to your Firebase Firestore database.</p>
+
+    <h2>Instructions:</h2>
+    <ol>
+        <li>Replace the Firebase config above with your actual Firebase project configuration</li>
+        <li>Open this HTML file in a web browser</li>
+        <li>Click the "Import Services" button below</li>
+        <li>Check your Firebase Console to see the imported services</li>
+    </ol>
+
+    <button id="import-btn" style="padding: 14px 28px; font-size: 18px; background: #ff6b81; color: #fff; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.12);">
+        Import Services
+    </button>
+
+    <div id="status" style="margin-top: 20px; font-weight: bold;"></div>
+
+    <h3>Services that will be imported:</h3>
+    <ul>
+        <li>Wash & Fold Laundry - KES 250</li>
+        <li>Dry Cleaning Service - KES 600</li>
+        <li>Ironing & Pressing - KES 150</li>
+        <li>Carpet & Rug Cleaning - KES 800</li>
+        <li>Curtain Cleaning - KES 400</li>
+        <li>Shoe Cleaning & Polishing - KES 300</li>
+        <li>Leather Care Service - KES 700</li>
+        <li>Wedding Dress Cleaning - KES 1500</li>
+    </ul>
+
+    <!-- Non-module helper: detect when the module failed to load (e.g. opened via file:// or blocked imports)
+         and show clear instructions with a link to run a local server. This does not attempt to perform
+         the import itself but helps users diagnose why the button may not work/appear. -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const btn = document.getElementById('import-btn');
+            const status = document.getElementById('status');
+
+            // If the module script failed to set window.importServices, warn the user and show instructions.
+            if (typeof window.importServices !== 'function') {
+                const warn = document.createElement('div');
+                warn.style.border = '3px solid #e74c3c';
+                warn.style.padding = '12px';
+                warn.style.marginTop = '12px';
+                warn.style.background = '#fff5f5';
+                warn.style.borderRadius = '6px';
+                warn.innerHTML = '<strong>Import unavailable locally.</strong> The Firebase SDK is loaded using ES module imports which may be blocked when opening this file via <code>file://</code> or by browser security settings.\n<br><br>Recommended quick fix: run a local HTTP server in the project folder and open the page at <code>http://localhost:8000/import_services.html</code>.';
+
+                const runCmd = document.createElement('pre');
+                runCmd.style.background = '#f4f4f4';
+                runCmd.style.padding = '10px';
+                runCmd.style.borderRadius = '4px';
+                runCmd.textContent = 'PowerShell (Windows):\npython -m http.server 8000\n\nThen open: http://localhost:8000/import_services.html';
+
+                warn.appendChild(runCmd);
+                btn.parentNode.insertBefore(warn, btn);
+
+                // Make button visible but disabled to avoid confusion.
+                btn.style.display = 'inline-block';
+                btn.disabled = true;
+
+                status.textContent = '⚠️ Import unavailable: check instructions above and open the page via http://localhost:8000/';
+                status.style.color = 'orange';
+            } else {
+                // Module loaded fine — wire up the button to the import function.
+                btn.addEventListener('click', function () {
+                    btn.disabled = true;
+                    status.textContent = 'Starting import...';
+                    status.style.color = 'black';
+                    // call the module-defined function
+                    try {
+                        window.importServices();
+                    } catch (e) {
+                        status.textContent = '❌ Error starting import. See console for details.';
+                        status.style.color = 'red';
+                        console.error(e);
+                    } finally {
+                        btn.disabled = false;
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // This rule allows anyone with your Firestore database reference to view, edit,
+    // and delete all data in your Firestore database. It is useful for getting
+    // started, but it is configured to expire after 30 days because it
+    // leaves your app open to attackers. At that time, all client
+    // requests to your Firestore database will be denied.
+    //
+    // Make sure to write security rules for your app before that time, or else
+    // all client requests to your Firestore database will be denied until you Update
+    // your rules
+    match /{document=**} {
+      allow read, write: if request.time < timestamp.date(2025, 12, 5);
+    }
+
+    // Users collection - users can read/write their own data
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Orders collection
+    match /orders/{orderId} {
+      // Users can read/write their own orders
+      allow read, write: if request.auth != null &&
+        (request.auth.uid == resource.data.userId ||
+         request.auth.uid == userId);
+
+      // Allow admins to read all orders (you'll need to implement admin role checking)
+      allow read: if request.auth != null && isAdmin(request.auth.uid);
+      allow update: if request.auth != null && isAdmin(request.auth.uid);
+    }
+
+    // Comments subcollection within orders
+    match /orders/{orderId}/comments/{commentId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null &&
+        (request.auth.uid == resource.data.userId ||
+         request.auth.uid == userId);
+    }
+
+    // Services collection - read-only for authenticated users, admin can write
+    match /services/{serviceId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin(request.auth.uid);
+    }
+
+    // Payments collection
+    match /payments/{paymentId} {
+      allow read, write: if request.auth != null &&
+        (request.auth.uid == resource.data.userId ||
+         request.auth.uid == userId);
+      allow read: if request.auth != null && isAdmin(request.auth.uid);
+    }
+  }
+
+  // Helper function to check if user is admin
+  function isAdmin(userId) {
+    return get(/databases/$(database)/documents/users/$(userId)).data.role == 'admin';
+  }
+}

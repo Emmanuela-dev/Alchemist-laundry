@@ -17,7 +17,9 @@ Future<void> main() async {
     // initialize firebase (optional) for realtime features
     try {
       await FirebaseService.instance.init();
-    } catch (_) {
+      print('Firebase initialized successfully');
+    } catch (e) {
+      print('Firebase initialization failed: $e');
       // ignore Firebase init errors in dev until project config is added
     }
   runApp(const MyApp());
@@ -54,24 +56,25 @@ class MyApp extends StatelessWidget {
         ),
         appBarTheme: AppBarTheme(
           backgroundColor: babyPink,
-          foregroundColor: Colors.black87,
+          foregroundColor: babyBlue,
           elevation: 2,
           shadowColor: babyPinkDark.withOpacity(0.3),
-          titleTextStyle: const TextStyle(
+          titleTextStyle: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: babyBlue,
           ),
+          iconTheme: IconThemeData(color: babyBlue),
         ),
         floatingActionButtonTheme: FloatingActionButtonThemeData(
           backgroundColor: babyPink,
-          foregroundColor: Colors.white,
+          foregroundColor: babyBlue,
           elevation: 6,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: babyPink,
-            foregroundColor: Colors.black87,
+            foregroundColor: babyBlue,
             elevation: 3,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
@@ -94,7 +97,8 @@ class MyApp extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(color: babyPink, width: 2),
           ),
-          labelStyle: TextStyle(color: babyPinkDark),
+          labelStyle: TextStyle(color: babyBlue),
+          hintStyle: TextStyle(color: babyBlue.withOpacity(0.7)),
         ),
       ),
       initialRoute: '/login',

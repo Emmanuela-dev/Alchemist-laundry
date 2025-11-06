@@ -1,0 +1,50 @@
+[
+  {
+    "title": "Wash & Fold Laundry",
+    "description": "Professional washing, drying, and folding service for everyday clothes. Perfect for t-shirts, jeans, underwear, and casual wear.",
+    "basePrice": 250,
+    "imageUrl": "https://images.unsplash.com/photo-1582735689369-4fe89db7114c?w=400&h=300&fit=crop"
+  },
+  {
+    "title": "Dry Cleaning Service",
+    "description": "Specialized dry cleaning for delicate fabrics, suits, dresses, and formal wear. Gentle cleaning that preserves fabric quality.",
+    "basePrice": 600,
+    "imageUrl": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop"
+  },
+  {
+    "title": "Ironing & Pressing",
+    "description": "Professional ironing and pressing service for shirts, trousers, skirts, and any wrinkled garments. Crisp and neat finish guaranteed.",
+    "basePrice": 150,
+    "imageUrl": "https://images.unsplash.com/photo-1521656693074-0ef32e80a5d5?w=400&h=300&fit=crop"
+  },
+  {
+    "title": "Carpet & Rug Cleaning",
+    "description": "Deep cleaning service for carpets, rugs, and upholstery. Removes stains, dust, and allergens for a fresh, clean home.",
+    "basePrice": 800,
+    "imageUrl": "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop"
+  },
+  {
+    "title": "Curtain Cleaning",
+    "description": "Professional cleaning for all types of curtains and drapes. Removes dust, stains, and odors while preserving fabric integrity.",
+    "basePrice": 400,
+    "imageUrl": "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=300&fit=crop"
+  },
+  {
+    "title": "Shoe Cleaning & Polishing",
+    "description": "Professional shoe cleaning, polishing, and restoration service. Makes your shoes look brand new with our expert care.",
+    "basePrice": 300,
+    "imageUrl": "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=300&fit=crop"
+  },
+  {
+    "title": "Leather Care Service",
+    "description": "Specialized cleaning and conditioning for leather jackets, bags, belts, and furniture. Restores and protects leather items.",
+    "basePrice": 700,
+    "imageUrl": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=300&fit=crop"
+  },
+  {
+    "title": "Wedding Dress Cleaning",
+    "description": "Expert cleaning and preservation for wedding dresses and special occasion gowns. Careful handling of delicate fabrics.",
+    "basePrice": 1500,
+    "imageUrl": "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&h=300&fit=crop"
+  }
+]

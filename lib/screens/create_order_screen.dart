@@ -53,54 +53,78 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     final items = [OrderItem(name: _itemName.text, quantity: qty, price: unitPrice)];
   // total computed in LocalRepo.createOrder
 
-    // Attempt to get current location (best-effort)
+    // Attempt to get current location (best-effort). Use last-known first and a short timeout
     double? lat;
     double? lng;
     try {
-      final permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        final req = await Geolocator.requestPermission();
-        if (req == LocationPermission.denied) {
-          // user denied, continue without location
+      final last = await Geolocator.getLastKnownPosition();
+      if (last != null) {
+        lat = last.latitude;
+        lng = last.longitude;
+      } else {
+        final permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          final req = await Geolocator.requestPermission();
+          if (req == LocationPermission.denied) {
+            // user denied, continue without location
+          }
         }
-      }
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (serviceEnabled) {
-        final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.best);
-        lat = pos.latitude;
-        lng = pos.longitude;
+        final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (serviceEnabled) {
+          try {
+            final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.best).timeout(const Duration(seconds: 5));
+            lat = pos.latitude;
+            lng = pos.longitude;
+          } catch (_) {
+            // timeout or other location errors -> ignore and continue
+          }
+        }
       }
     } catch (e) {
       // ignore location errors; proceed without coords
     }
 
-    if (FirebaseService.instance.ready) {
-      final user = FirebaseService.instance.auth.currentUser;
-      final doc = await FirebaseService.instance.createOrder({
-        'userId': user?.uid ?? LocalRepo.instance.currentUser?.id,
-        'serviceId': serviceId ?? 's1',
-        'items': items.map((e) => {'name': e.name, 'quantity': e.quantity, 'price': e.price}).toList(),
-        'pickupTime': pickup.toIso8601String(),
-        'deliveryTime': delivery.toIso8601String(),
-        'instructions': _instructions.text,
-        'total': items.fold<double>(0, (p, e) => p + e.price * e.quantity) + (LocalRepo.instance.listServices().firstWhere((s) => s.id == (serviceId ?? 's1')).basePrice),
-        'latitude': lat,
-        'longitude': lng,
-        'status': 'pending',
-        'placedAt': DateTime.now().toIso8601String(),
-      });
-      if (!mounted) return;
-      setState(() { _loading = false; });
-      Navigator.pushReplacementNamed(context, '/order', arguments: {'orderId': doc.id});
-      // After creating the order in Firestore, open WhatsApp to primary admin
-      _openWhatsAppToPrimaryAdmin(doc.id, items, serviceId, orderTotal: items.fold<double>(0, (p, e) => p + e.price * e.quantity));
-    } else {
-      final order = await LocalRepo.instance.createOrder(serviceId: serviceId ?? 's1', items: items, pickup: pickup, delivery: delivery, instructions: _instructions.text, latitude: lat, longitude: lng);
-      if (!mounted) return;
-      setState(() { _loading = false; });
-      Navigator.pushReplacementNamed(context, '/order', arguments: {'orderId': order.id});
-      // After creating the local order, open WhatsApp to primary admin
-      _openWhatsAppToPrimaryAdmin(order.id, items, serviceId, orderTotal: items.fold<double>(0, (p, e) => p + e.price * e.quantity));
+    // Centralized create order flow with error handling and guaranteed loading reset
+    try {
+      // Safely compute base price for the selected service (avoid firstWhere throwing)
+      final servicesList = LocalRepo.instance.listServices();
+      final basePrice = servicesList.firstWhere(
+        (s) => s.id == (serviceId ?? 's1'),
+        orElse: () => Service(id: '', title: '', description: '', basePrice: 0.0),
+      ).basePrice;
+
+      if (FirebaseService.instance.ready) {
+        final user = FirebaseService.instance.auth.currentUser;
+        final doc = await FirebaseService.instance.createOrder({
+          'userId': user?.uid ?? LocalRepo.instance.currentUser?.id,
+          'serviceId': serviceId ?? 's1',
+          'items': items.map((e) => {'name': e.name, 'quantity': e.quantity, 'price': e.price}).toList(),
+          'pickupTime': pickup.toIso8601String(),
+          'deliveryTime': delivery.toIso8601String(),
+          'instructions': _instructions.text,
+          'total': items.fold<double>(0, (p, e) => p + e.price * e.quantity) + basePrice,
+          'latitude': lat,
+          'longitude': lng,
+          'status': 'pending',
+          'placedAt': DateTime.now().toIso8601String(),
+        });
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/order', arguments: {'orderId': doc.id});
+        // After creating the order in Firestore, open WhatsApp to primary admin
+        _openWhatsAppToPrimaryAdmin(doc.id, items, serviceId, orderTotal: items.fold<double>(0, (p, e) => p + e.price * e.quantity));
+      } else {
+        final order = await LocalRepo.instance.createOrder(serviceId: serviceId ?? 's1', items: items, pickup: pickup, delivery: delivery, instructions: _instructions.text, latitude: lat, longitude: lng);
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/order', arguments: {'orderId': order.id});
+        // After creating the local order, open WhatsApp to primary admin
+        _openWhatsAppToPrimaryAdmin(order.id, items, serviceId, orderTotal: items.fold<double>(0, (p, e) => p + e.price * e.quantity));
+      }
+    } catch (e, st) {
+      // ignore: avoid_print
+      print('Create order failed: $e\n$st');
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to place order: $e')));
+    } finally {
+      if (mounted) setState(() { _loading = false; });
     }
   }
 
@@ -121,7 +145,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
 
   @override
   Widget build(BuildContext context) {
-  final service = serviceId != null ? LocalRepo.instance.listServices().firstWhere((s) => s.id == serviceId, orElse: () => LocalRepo.instance.listServices()[0]) : null;
+    final services = LocalRepo.instance.listServices();
+    final service = serviceId != null ? services.firstWhere((s) => s.id == serviceId, orElse: () => services.isNotEmpty ? services[0] : Service(id: '', title: '', description: '', basePrice: 0.0)) : null;
     final header = service != null ? Text('Service: ${service.title}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)) : const SizedBox.shrink();
     return Scaffold(
       appBar: AppBar(title: const Text('Create Order')),

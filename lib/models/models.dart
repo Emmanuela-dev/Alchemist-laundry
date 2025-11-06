@@ -23,12 +23,14 @@ class Service {
   final String title;
   final String description;
   final double basePrice; // per kg or per item depending on type
+  final String? imageUrl; // URL to service image
 
   Service({
     required this.id,
     required this.title,
     required this.description,
     required this.basePrice,
+    this.imageUrl,
   });
 }
 

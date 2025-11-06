@@ -166,8 +166,10 @@ class LocalRepo {
     await _saveComments();
     // Notify admins via SMS (best-effort). Uses SmsConfig.enabled to decide.
     try {
-      final user = _users[_currentUser!.id];
-      final msg = 'New order ${order.id} from ${user?.name ?? 'unknown'} (${user?.phone ?? user?.email ?? ''}). Total KES ${order.total.toStringAsFixed(0)}.';
+      // Notify admins with a minimal message: only the service type/title as requested.
+      final service = _services[serviceId];
+      final serviceTitle = service?.title ?? 'New Order';
+      final msg = serviceTitle; // minimal content
       await SmsService.instance.notifyAdmins(msg);
     } catch (e) {
       // ignore SMS failures in local repo

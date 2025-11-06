@@ -19,8 +19,14 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     if (FirebaseService.instance.ready) {
-      FirebaseService.instance.firestore.collection('services').snapshots().listen((snap) {
-        final list = snap.docs.map((d) => Service(id: d.id, title: d.get('title') ?? '', description: d.get('description') ?? '', basePrice: (d.get('basePrice') as num?)?.toDouble() ?? 0.0)).toList();
+      FirebaseService.instance.listServices().listen((snap) {
+        final list = snap.docs.map((d) => Service(
+          id: d.id,
+          title: d.get('title') ?? '',
+          description: d.get('description') ?? '',
+          basePrice: (d.get('basePrice') as num?)?.toDouble() ?? 0.0,
+          imageUrl: d.get('imageUrl'),
+        )).toList();
         setState(() => services = list);
       });
     } else {
@@ -90,15 +96,41 @@ class _HomeScreenState extends State<HomeScreen> {
                             onTap: () => Navigator.pushNamed(context, '/create-order', arguments: {'serviceId': s.id}),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-                              child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                              child: Row(children: [
+                                // Thumbnail
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: s.imageUrl != null && s.imageUrl!.isNotEmpty
+                                      ? Image.network(
+                                          s.imageUrl!,
+                                          width: 72,
+                                          height: 72,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stack) => Container(
+                                            width: 72,
+                                            height: 72,
+                                            color: Colors.grey.shade200,
+                                            child: const Icon(Icons.image_not_supported, color: Colors.black26),
+                                          ),
+                                        )
+                                      : Container(
+                                          width: 72,
+                                          height: 72,
+                                          color: Colors.grey.shade200,
+                                          child: const Icon(Icons.image, color: Colors.black26),
+                                        ),
+                                ),
+                                const SizedBox(width: 12),
+                                // Title & description
                                 Expanded(
                                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                     Text(s.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                                     const SizedBox(height: 6),
-                                    Text(s.description, style: const TextStyle(color: Colors.black54)),
+                                    Text(s.description, style: const TextStyle(color: Colors.black54), maxLines: 2, overflow: TextOverflow.ellipsis),
                                   ]),
                                 ),
                                 const SizedBox(width: 8),
+                                // Price & action
                                 Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                                   Text('KES ${s.basePrice.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
                                   const SizedBox(height: 6),
