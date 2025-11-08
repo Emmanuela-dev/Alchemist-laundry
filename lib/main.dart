@@ -9,6 +9,7 @@ import 'screens/orders_screen.dart';
 import 'screens/order_detail_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/admin_screen.dart';
+import 'screens/admin_services_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -110,6 +111,7 @@ class MyApp extends StatelessWidget {
         '/orders': (_) => const OrdersScreen(),
         '/profile': (_) => const ProfileScreen(),
         '/admin': (_) => const AdminScreen(),
+        '/admin-services': (_) => const AdminServicesScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/order') {

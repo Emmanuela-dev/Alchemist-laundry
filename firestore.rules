@@ -54,6 +54,11 @@ service cloud.firestore {
          request.auth.uid == userId);
       allow read: if request.auth != null && isAdmin(request.auth.uid);
     }
+
+    // Admin codes collection - only admins can read/write
+    match /admin_codes/{codeId} {
+      allow read, write: if request.auth != null && isAdmin(request.auth.uid);
+    }
   }
 
   // Helper function to check if user is admin

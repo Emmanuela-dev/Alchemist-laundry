@@ -2,12 +2,15 @@ enum OrderStatus { pending, pickedUp, inWashing, ready, outForDelivery, delivere
 
 enum PaymentStatus { pending, processing, completed, failed, cancelled, refunded }
 
+enum UserRole { client, admin }
+
 class UserProfile {
   final String id;
   String name;
   String email;
   String phone;
   String address;
+  UserRole role;
 
   UserProfile({
     required this.id,
@@ -15,6 +18,7 @@ class UserProfile {
     required this.email,
     this.phone = '',
     this.address = '',
+    this.role = UserRole.client,
   });
 }
 

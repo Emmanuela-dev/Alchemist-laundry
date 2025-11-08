@@ -3,7 +3,6 @@ import '../services/local_repo.dart';
 import '../models/models.dart';
 import '../widgets/logo_widget.dart';
 // Supabase removed; using LocalRepo/Firebase for services in prototype
-import '../services/firebase_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,20 +17,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    if (FirebaseService.instance.ready) {
-      FirebaseService.instance.listServices().listen((snap) {
-        final list = snap.docs.map((d) => Service(
-          id: d.id,
-          title: d.get('title') ?? '',
-          description: d.get('description') ?? '',
-          basePrice: (d.get('basePrice') as num?)?.toDouble() ?? 0.0,
-          imageUrl: d.get('imageUrl'),
-        )).toList();
-        setState(() => services = list);
-      });
-    } else {
-      services = LocalRepo.instance.listServices();
-    }
+    // Use local services always to avoid runtime dependency on Firebase for service data.
+    // This ensures services are always available offline and prevents runtime "no element" issues
+    // when Firestore is unavailable or not configured.
+    services = LocalRepo.instance.listServices();
   }
 
   @override
@@ -41,7 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(title: const Text('Laundry Home'), actions: [
         IconButton(onPressed: () => Navigator.pushNamed(context, '/orders'), icon: const Icon(Icons.history)),
         IconButton(onPressed: () => Navigator.pushNamed(context, '/profile'), icon: const Icon(Icons.person)),
-        IconButton(onPressed: () => Navigator.pushNamed(context, '/admin'), icon: const Icon(Icons.dashboard)),
+        IconButton(onPressed: () => Navigator.pushNamed(context, '/admin'), icon: const Icon(Icons.admin_panel_settings)),
       ]),
       body: Padding(
         padding: const EdgeInsets.all(12.0),

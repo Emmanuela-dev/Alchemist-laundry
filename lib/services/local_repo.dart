@@ -25,19 +25,25 @@ class LocalRepo {
       final list = jsonDecode(svcString) as List<dynamic>;
       for (final e in list) {
         final map = e as Map<String, dynamic>;
-        final s = Service(id: map['id'], title: map['title'], description: map['description'] ?? '', basePrice: (map['basePrice'] as num).toDouble());
+        final s = Service(
+          id: map['id'],
+          title: map['title'],
+          description: map['description'] ?? '',
+          basePrice: (map['basePrice'] as num).toDouble(),
+          imageUrl: map['imageUrl'] as String?,
+        );
         _services[s.id] = s;
       }
     } else {
       // seed
-      final s1 = Service(id: 's1', title: 'Wash & Fold', description: 'Wash and fold per laundry basket', basePrice: 300);
-      final s2 = Service(id: 's2', title: 'Dry Cleaning', description: 'Dry clean per item', basePrice: 300);
-      final s3 = Service(id: 's3', title: 'Ironing / Pressing', description: 'Per item ironing', basePrice: 50);
-      final s4 = Service(id: 's4', title: 'Pickup & Delivery', description: 'Pickup and delivery service', basePrice: 0);
-      final s5 = Service(id: 's4', title: 'Duvet', description:'Duvet based on sizes', basePrice: 200-350);
-      final s6 = Service(id: 's6', title: 'Blankets', description: 'Washing normal blankets', basePrice: 150);
-      final s7 = Service(id: 's7', title: 'Shoes', description: 'Wash all types of shoes', basePrice: 50);
-      final s8 = Service(id: 's8', title: 'House Cleaning', description: 'General House Cleaning', basePrice: 1200);
+      final s1 = Service(id: 's1', title: 'Wash & Fold', description: 'Wash and fold per laundry basket', basePrice: 300, imageUrl: null);
+      final s2 = Service(id: 's2', title: 'Dry Cleaning', description: 'Dry clean per item', basePrice: 300, imageUrl: null);
+      final s3 = Service(id: 's3', title: 'Ironing / Pressing', description: 'Per item ironing', basePrice: 50, imageUrl: null);
+      final s4 = Service(id: 's4', title: 'Pickup & Delivery', description: 'Pickup and delivery service', basePrice: 0, imageUrl: null);
+      final s5 = Service(id: 's5', title: 'Duvet', description: 'Duvet based on sizes', basePrice: 275, imageUrl: null);
+      final s6 = Service(id: 's6', title: 'Blankets', description: 'Washing normal blankets', basePrice: 150, imageUrl: null);
+      final s7 = Service(id: 's7', title: 'Shoes', description: 'Wash all types of shoes', basePrice: 50, imageUrl: null);
+      final s8 = Service(id: 's8', title: 'House Cleaning', description: 'General House Cleaning', basePrice: 1200, imageUrl: null);
       _services[s1.id] = s1;
       _services[s2.id] = s2;
       _services[s3.id] = s3;
@@ -98,8 +104,26 @@ class LocalRepo {
 
   // persistence helpers
   Future<void> _saveServices() async {
-    final list = _services.values.map((s) => {'id': s.id, 'title': s.title, 'description': s.description, 'basePrice': s.basePrice}).toList();
+    final list = _services.values.map((s) => {'id': s.id, 'title': s.title, 'description': s.description, 'basePrice': s.basePrice, 'imageUrl': s.imageUrl}).toList();
     await _prefs.setString('services', jsonEncode(list));
+  }
+
+  // Admin helpers for services
+  Future<void> addService(Service service) async {
+    _services[service.id] = service;
+    await _saveServices();
+  }
+
+  Future<void> updateService(Service service) async {
+    if (_services.containsKey(service.id)) {
+      _services[service.id] = service;
+      await _saveServices();
+    }
+  }
+
+  Future<void> deleteService(String id) async {
+    _services.remove(id);
+    await _saveServices();
   }
 
   Future<void> _saveUsers() async {

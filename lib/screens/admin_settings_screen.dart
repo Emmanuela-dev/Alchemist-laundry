@@ -45,7 +45,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
         child: Column(children: [
           TextField(controller: _controller, decoration: const InputDecoration(labelText: 'Admin phone (+254716548186)', hintText: '+254716548186')),
           const SizedBox(height: 8),
-          ElevatedButton(onPressed: _add, child: const Text('Add admin number')),
+          ElevatedButton(onPressed: _add, child: const Text('+254716548186')),
           const SizedBox(height: 12),
           const Text('Configured admin numbers', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),

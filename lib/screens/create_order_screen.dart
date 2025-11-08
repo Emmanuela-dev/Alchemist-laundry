@@ -146,8 +146,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   @override
   Widget build(BuildContext context) {
     final services = LocalRepo.instance.listServices();
-    final service = serviceId != null ? services.firstWhere((s) => s.id == serviceId, orElse: () => services.isNotEmpty ? services[0] : Service(id: '', title: '', description: '', basePrice: 0.0)) : null;
-    final header = service != null ? Text('Service: ${service.title}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)) : const SizedBox.shrink();
+    final service = serviceId != null ? services.firstWhere((s) => s.id == serviceId, orElse: () => Service(id: '', title: '', description: '', basePrice: 0.0)) : null;
+    final bool serviceAvailable = service != null && service.id.isNotEmpty;
+  final header = serviceAvailable ? Text('Service: ${service.title}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)) : const SizedBox.shrink();
     return Scaffold(
       appBar: AppBar(title: const Text('Create Order')),
       body: Padding(
@@ -168,7 +169,14 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             TextButton(onPressed: () => _pickDate(context, false), child: const Text('Change')),
           ],),
           TextField(controller: _instructions, decoration: const InputDecoration(labelText: 'Special instructions')),const SizedBox(height: 16),
-          ElevatedButton(onPressed: _loading ? null : _submit, child: _loading ? const CircularProgressIndicator() : const Text('Place Order')),
+          if (!serviceAvailable) ...[
+            const Text('Selected service is not available. Please choose a service from the Home screen.', style: TextStyle(color: Colors.red)),
+            const SizedBox(height: 12),
+          ],
+          ElevatedButton(
+            onPressed: (!_loading && serviceAvailable) ? _submit : null,
+            child: _loading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Place Order'),
+          ),
         ]),
       ),
     );

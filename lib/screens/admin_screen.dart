@@ -31,7 +31,11 @@ class _AdminScreenState extends State<AdminScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-  appBar: AppBar(title: const Text('Admin'), actions: [IconButton(icon: const Icon(Icons.settings), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminSettingsScreen())))]),
+  appBar: AppBar(title: const Text('Admin Dashboard'), actions: [
+    IconButton(icon: const Icon(Icons.inventory_2), onPressed: () => Navigator.pushNamed(context, '/admin-services')),
+    IconButton(icon: const Icon(Icons.settings), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminSettingsScreen()))),
+    IconButton(icon: const Icon(Icons.home), onPressed: () => Navigator.pushReplacementNamed(context, '/home')),
+  ]),
       body: ListView.builder(
         itemCount: orders.length,
         itemBuilder: (context, i) {

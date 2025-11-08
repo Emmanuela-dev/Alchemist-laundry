@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/local_repo.dart';
 import '../services/firebase_service.dart';
+import '../models/models.dart';
 // Supabase removed; using LocalRepo/Firebase for auth in prototype
 
 class LoginScreen extends StatefulWidget {
@@ -14,6 +15,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _loading = false;
+  UserRole? _userRole;
 
   void _login() async {
     setState(() {
@@ -21,12 +23,29 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     try {
       if (FirebaseService.instance.ready) {
-        await FirebaseService.instance.signIn(_email.text.trim(), _password.text.trim());
+        final cred = await FirebaseService.instance.signIn(_email.text.trim(), _password.text.trim());
+        final uid = cred.user?.uid;
+        if (uid != null) {
+          final userDoc = await FirebaseService.instance.getUserProfile(uid);
+          final data = userDoc.data() as Map<String, dynamic>?;
+          final role = data?['role'] ?? 'client';
+          _userRole = UserRole.values.firstWhere(
+            (r) => r.name == role,
+            orElse: () => UserRole.client,
+          );
+        }
       } else {
         await LocalRepo.instance.login(_email.text, _password.text);
+        // For local repo, assume client role for now
+        _userRole = UserRole.client;
       }
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/home');
+      // Navigate based on role
+      if (_userRole == UserRole.admin) {
+        Navigator.pushReplacementNamed(context, '/admin');
+      } else {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

@@ -9,6 +9,6 @@ class SmsConfig {
 
   // Admin numbers to notify (list of E.164 strings)
   static const adminNumbers = <String>[
-    '+254700000000',
+    '+254716548186',
   ];
 }

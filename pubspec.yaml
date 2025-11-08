@@ -67,6 +67,7 @@ dependencies:
   timezone: ^0.10.1
   # Supabase for backend (Auth + Postgres)
   # supabase_flutter: ^1.10.25
+  flutter_svg: ^2.0.10
 
 dev_dependencies:
   flutter_test:
@@ -94,6 +95,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/images/logo.svg
     - assets/images/1.png
     - assets/images/washing_machine.png
 

@@ -98,6 +98,38 @@ class FirebaseService {
     return firestore.collection('payments').where('orderId', isEqualTo: orderId).snapshots();
   }
 
+  // Admin codes methods
+  Future<bool> validateAdminCode(String code) async {
+    try {
+      final querySnapshot = await firestore
+          .collection('admin_codes')
+          .where('code', isEqualTo: code)
+          .where('isActive', isEqualTo: true)
+          .get();
+      return querySnapshot.docs.isNotEmpty;
+    } catch (e) {
+      print('Error validating admin code: $e');
+      return false;
+    }
+  }
+
+  Future<void> createAdminCode(String code, String description) async {
+    await firestore.collection('admin_codes').add({
+      'code': code,
+      'description': description,
+      'isActive': true,
+      'createdAt': FieldValue.serverTimestamp(),
+      'createdBy': auth.currentUser?.uid,
+    });
+  }
+
+  Future<void> deactivateAdminCode(String codeId) async {
+    await firestore.collection('admin_codes').doc(codeId).update({
+      'isActive': false,
+      'deactivatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   // Admin methods
   Future<void> updateOrderStatus(String orderId, String status) async {
     await firestore.collection('orders').doc(orderId).update({'status': status});
@@ -107,3 +139,4 @@ class FirebaseService {
     await firestore.collection('orders').doc(orderId).delete();
   }
 }
+

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class LogoWidget extends StatefulWidget {
   final double size;
@@ -39,7 +40,7 @@ class _LogoWidgetState extends State<LogoWidget> with SingleTickerProviderStateM
       onTap: _onTap,
       child: ScaleTransition(
         scale: _scale,
-        child: Image.asset('assets/images/1.png', width: widget.size, height: widget.size, fit: BoxFit.contain),
+        child: SvgPicture.asset('assets/images/logo.svg', width: widget.size, height: widget.size, fit: BoxFit.contain),
       ),
     );
   }
