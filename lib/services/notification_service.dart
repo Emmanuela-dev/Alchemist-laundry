@@ -27,4 +27,15 @@ class NotificationService {
     // ignore: avoid_print
     print('Notification for order $orderId: $title - $body');
   }
+
+  Future<void> showNotification(String title, String body) async {
+    await init();
+    // For now just log. This avoids depending on native
+    // plugins for web/desktop builds and keeps behavior
+    // predictable during development.
+    // When you re-introduce flutter_local_notifications,
+    // restore the original implementation.
+    // ignore: avoid_print
+    print('Notification: $title - $body');
+  }
 }

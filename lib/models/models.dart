@@ -58,6 +58,8 @@ class Order {
   final double total;
   final double? latitude;
   final double? longitude;
+  final String? paymentMethod;
+  final String? paymentStatus;
 
   Order({
     required this.id,
@@ -71,6 +73,8 @@ class Order {
     required this.total,
     this.latitude,
     this.longitude,
+    this.paymentMethod,
+    this.paymentStatus,
   });
 }
 

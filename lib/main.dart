@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'services/local_repo.dart';
 import 'services/firebase_service.dart';
+import 'services/notification_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/home_screen.dart';
@@ -11,18 +13,51 @@ import 'screens/profile_screen.dart';
 import 'screens/admin_screen.dart';
 import 'screens/admin_services_screen.dart';
 
+// Handle background messages
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  print('Handling a background message: ${message.messageId}');
+  // Handle background message
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize notifications
+  await NotificationService.instance.init();
+
   // initialize local persistent data
   await LocalRepo.instance.init();
-    // initialize firebase (optional) for realtime features
-    try {
-      await FirebaseService.instance.init();
-      print('Firebase initialized successfully');
-    } catch (e) {
-      print('Firebase initialization failed: $e');
-      // ignore Firebase init errors in dev until project config is added
-    }
+
+  // initialize firebase (optional) for realtime features
+  try {
+    await FirebaseService.instance.init();
+    print('Firebase initialized successfully');
+
+    // Set up FCM background message handler
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+    // Handle foreground messages
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print('Received foreground message: ${message.notification?.title}');
+      if (message.notification != null) {
+        NotificationService.instance.showNotification(
+          message.notification!.title ?? 'Notification',
+          message.notification!.body ?? '',
+        );
+      }
+    });
+
+    // Handle when app is opened from notification
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print('Message opened app: ${message.data}');
+      // Handle navigation based on message data
+    });
+
+  } catch (e) {
+    print('Firebase initialization failed: $e');
+    // ignore Firebase init errors in dev until project config is added
+  }
+
   runApp(const MyApp());
 }
 
@@ -41,7 +76,8 @@ class MyApp extends StatelessWidget {
     final babyYellow = const Color(0xFFFFF9C4); // Soft baby yellow
 
     return MaterialApp(
-      title: 'Bubble Laundry',
+      title: 'Alchemist Laundry',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.pink,
         primaryColor: babyPink,

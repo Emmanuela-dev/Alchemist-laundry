@@ -176,24 +176,32 @@ class LocalRepo {
 
   UserProfile? get currentUser => _currentUser;
 
+  Future<void> setCurrentUser(UserProfile user) async {
+    _currentUser = user;
+    // Also save to users map if not already there
+    _users[user.id] = user;
+    await _saveUsers();
+  }
+
   // Services
   List<Service> listServices() => _services.values.toList();
 
   // Orders
-  Future<Order> createOrder({required String serviceId, required List<OrderItem> items, required DateTime pickup, required DateTime delivery, String instructions = '', double? latitude, double? longitude}) async {
+  Future<Order> createOrder({required String serviceId, required List<OrderItem> items, required DateTime pickup, required DateTime delivery, String instructions = '', double? latitude, double? longitude, bool isCartOrder = false, String? paymentMethod, String? paymentStatus}) async {
     final id = DateTime.now().microsecondsSinceEpoch.toString();
-    final total = items.fold<double>(0, (p, e) => p + e.price * e.quantity) + (_services[serviceId]?.basePrice ?? 0);
-    final order = Order(id: id, userId: _currentUser!.id, serviceId: serviceId, items: items, pickupTime: pickup, deliveryTime: delivery, instructions: instructions, total: total, latitude: latitude, longitude: longitude);
+    // For cart orders, don't add base price since items already include pricing
+    final basePrice = isCartOrder ? 0.0 : (_services[serviceId]?.basePrice ?? 0);
+    final total = items.fold<double>(0, (p, e) => p + e.price * e.quantity) + basePrice;
+    final order = Order(id: id, userId: _currentUser!.id, serviceId: serviceId, items: items, pickupTime: pickup, deliveryTime: delivery, instructions: instructions, total: total, latitude: latitude, longitude: longitude, paymentMethod: paymentMethod, paymentStatus: paymentStatus);
     _orders[id] = order;
     _comments[id] = [];
     await _saveOrders();
     await _saveComments();
     // Notify admins via SMS (best-effort). Uses SmsConfig.enabled to decide.
     try {
-      // Notify admins with a minimal message: only the service type/title as requested.
-      final service = _services[serviceId];
-      final serviceTitle = service?.title ?? 'New Order';
-      final msg = serviceTitle; // minimal content
+      // Notify admins with a minimal message: order summary
+      final itemsText = items.map((i) => '${i.name} x${i.quantity}').join(', ');
+      final msg = 'New Order: $itemsText - Total: KES ${total.toStringAsFixed(0)}';
       await SmsService.instance.notifyAdmins(msg);
     } catch (e) {
       // ignore SMS failures in local repo
@@ -233,4 +241,25 @@ class LocalRepo {
 
   // Admin
   List<Order> listAllOrders() => _orders.values.toList();
+
+  // User lookup for login
+  UserProfile? findUserByNameAndPhone(String name, String phone) {
+    try {
+      return _users.values.firstWhere(
+        (user) => user.name.toLowerCase() == name.toLowerCase() && user.phone == phone,
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
+  UserProfile? findUserByPhone(String phone) {
+    try {
+      return _users.values.firstWhere(
+        (user) => user.phone == phone,
+      );
+    } catch (e) {
+      return null;
+    }
+  }
 }

@@ -24,24 +24,19 @@ service cloud.firestore {
     // Orders collection
     match /orders/{orderId} {
       // Users can read/write their own orders
-      allow read, write: if request.auth != null &&
-        (request.auth.uid == resource.data.userId ||
-         request.auth.uid == userId);
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
 
-      // Allow admins to read all orders (you'll need to implement admin role checking)
-      allow read: if request.auth != null && isAdmin(request.auth.uid);
-      allow update: if request.auth != null && isAdmin(request.auth.uid);
+      // Admin has full read/write access to all orders
+      allow read, write: if request.auth != null && isAdmin(request.auth.uid);
     }
 
     // Comments subcollection within orders
     match /orders/{orderId}/comments/{commentId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null &&
-        (request.auth.uid == resource.data.userId ||
-         request.auth.uid == userId);
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read, write: if request.auth != null && isAdmin(request.auth.uid);
     }
 
-    // Services collection - read-only for authenticated users, admin can write
+    // Services collection - read-only for authenticated users, admin has full access
     match /services/{serviceId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && isAdmin(request.auth.uid);
@@ -49,10 +44,8 @@ service cloud.firestore {
 
     // Payments collection
     match /payments/{paymentId} {
-      allow read, write: if request.auth != null &&
-        (request.auth.uid == resource.data.userId ||
-         request.auth.uid == userId);
-      allow read: if request.auth != null && isAdmin(request.auth.uid);
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read, write: if request.auth != null && isAdmin(request.auth.uid);
     }
 
     // Admin codes collection - only admins can read/write

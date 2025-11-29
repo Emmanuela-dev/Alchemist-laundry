@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/sms_config.dart';
 import '../services/admin_numbers.dart';
 import 'full_map_screen.dart';
+import 'order_tracking_screen.dart';
 import '../models/models.dart';
 import '../services/local_repo.dart';
 
@@ -58,7 +59,23 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     if (order == null) return Scaffold(body: Center(child: Text('Order not found')));
   final service = LocalRepo.instance.listServices().firstWhere((s) => s.id == order!.serviceId);
     return Scaffold(
-      appBar: AppBar(title: Text('Order ${order!.id}')),
+      appBar: AppBar(
+        title: Text('Order ${order!.id}'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.track_changes),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => OrderTrackingScreen(order: order!),
+                ),
+              );
+            },
+            tooltip: 'Track Order',
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

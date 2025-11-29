@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import '../firebase_options.dart';
 
 class FirebaseService {
   FirebaseService._();
@@ -11,13 +13,27 @@ class FirebaseService {
 
   late FirebaseAuth auth;
   late FirebaseFirestore firestore;
+  late FirebaseMessaging messaging;
 
   Future<void> init() async {
     if (_ready) return;
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
     auth = FirebaseAuth.instance;
     firestore = FirebaseFirestore.instance;
-  // messaging is optional and added when firebase_messaging is enabled/compatible
+    messaging = FirebaseMessaging.instance;
+
+    // Request permission for notifications
+    try {
+      await messaging.requestPermission();
+      // Get FCM token
+      final token = await messaging.getToken();
+      print('FCM Token: $token');
+    } catch (e) {
+      print('Error setting up FCM: $e');
+    }
+
     _ready = true;
   }
 
@@ -28,6 +44,36 @@ class FirebaseService {
 
   Future<UserCredential> signIn(String email, String password) async {
     return await auth.signInWithEmailAndPassword(email: email, password: password);
+  }
+
+  // Phone authentication
+  Future<void> verifyPhoneNumber(
+    String phoneNumber,
+    Function(String verificationId) onCodeSent,
+    Function(PhoneAuthCredential credential) onVerificationCompleted,
+    Function(FirebaseAuthException error) onVerificationFailed,
+  ) async {
+    await auth.verifyPhoneNumber(
+      phoneNumber: phoneNumber,
+      verificationCompleted: onVerificationCompleted,
+      verificationFailed: onVerificationFailed,
+      codeSent: (String verificationId, int? resendToken) {
+        onCodeSent(verificationId);
+      },
+      codeAutoRetrievalTimeout: (String verificationId) {},
+    );
+  }
+
+  Future<UserCredential> signInWithPhoneCredential(PhoneAuthCredential credential) async {
+    return await auth.signInWithCredential(credential);
+  }
+
+  Future<UserCredential> signInWithSmsCode(String verificationId, String smsCode) async {
+    PhoneAuthCredential credential = PhoneAuthProvider.credential(
+      verificationId: verificationId,
+      smsCode: smsCode,
+    );
+    return await signInWithPhoneCredential(credential);
   }
 
   Future<void> signOut() async {
@@ -137,6 +183,40 @@ class FirebaseService {
 
   Future<void> deleteOrder(String orderId) async {
     await firestore.collection('orders').doc(orderId).delete();
+  }
+
+  // Notification methods
+  Future<String?> getFCMToken() async {
+    try {
+      return await messaging.getToken();
+    } catch (e) {
+      print('Error getting FCM token: $e');
+      return null;
+    }
+  }
+
+  Future<void> subscribeToTopic(String topic) async {
+    try {
+      await messaging.subscribeToTopic(topic);
+    } catch (e) {
+      print('Error subscribing to topic: $e');
+    }
+  }
+
+  Future<void> unsubscribeFromTopic(String topic) async {
+    try {
+      await messaging.unsubscribeFromTopic(topic);
+    } catch (e) {
+      print('Error unsubscribing from topic: $e');
+    }
+  }
+
+  // Update user FCM token
+  Future<void> updateUserFCMToken(String userId, String token) async {
+    await firestore.collection('users').doc(userId).update({
+      'fcmToken': token,
+      'lastTokenUpdate': DateTime.now().toIso8601String(),
+    });
   }
 }
 
