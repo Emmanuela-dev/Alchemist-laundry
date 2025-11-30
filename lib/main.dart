@@ -12,6 +12,7 @@ import 'screens/order_detail_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/admin_screen.dart';
 import 'screens/admin_services_screen.dart';
+import 'screens/customer_care_screen.dart';
 
 // Handle background messages
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -148,6 +149,7 @@ class MyApp extends StatelessWidget {
         '/profile': (_) => const ProfileScreen(),
         '/admin': (_) => const AdminScreen(),
         '/admin-services': (_) => const AdminServicesScreen(),
+        '/customer-care': (_) => const CustomerCareScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/order') {

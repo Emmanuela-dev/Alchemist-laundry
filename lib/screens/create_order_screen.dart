@@ -155,8 +155,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               if (paymentResult['success'] == true) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('M-Pesa STK Push sent! ${paymentResult['message'] ?? ''}'),
-                    duration: const Duration(seconds: 5),
+                    content: Text(paymentResult['message'] ?? 'Please send payment to 0757952937 via M-Pesa'),
+                    duration: const Duration(seconds: 7),
                   ),
                 );
               } else {
@@ -191,9 +191,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           );
         }
 
+        // Open WhatsApp to primary admin first
+        await _openWhatsAppToPrimaryAdmin(orderId, cartItems, 'cart-order', orderTotal: _totalAmount);
+        // Then navigate to order details
         Navigator.pushReplacementNamed(context, '/order', arguments: {'orderId': orderId});
-        // After creating the order in Firestore, open WhatsApp to primary admin
-        _openWhatsAppToPrimaryAdmin(orderId, cartItems, 'cart-order', orderTotal: _totalAmount);
       } else {
         final order = await LocalRepo.instance.createOrder(
           serviceId: 'cart-order',
@@ -226,10 +227,11 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           );
         }
 
+        // Open WhatsApp to primary admin first
+        await _openWhatsAppToPrimaryAdmin(orderId, cartItems, 'cart-order', orderTotal: _totalAmount);
+        // Then navigate to order details
         if (!mounted) return;
         Navigator.pushReplacementNamed(context, '/order', arguments: {'orderId': orderId});
-        // After creating the local order, open WhatsApp to primary admin
-        _openWhatsAppToPrimaryAdmin(orderId, cartItems, 'cart-order', orderTotal: _totalAmount);
       }
     } catch (e, st) {
       // ignore: avoid_print
@@ -679,7 +681,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                                   child: _buildPaymentMethodOption(
                                     PaymentMethod.mpesa,
                                     'M-Pesa',
-                                    'Contact for payment',
+                                    'Send to 0757952937',
                                     Icons.phone_android,
                                     const Color(0xFF48BB78),
                                   ),

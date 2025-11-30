@@ -9,10 +9,7 @@ class PaymentService {
   factory PaymentService() => _instance;
   PaymentService._internal();
 
-  Timer? _statusCheckTimer;
-  int _checkAttempts = 0;
-
-  /// Initiate M-Pesa payment for an order
+  /// Initiate M-Pesa payment for an order (Send Money method)
   Future<Map<String, dynamic>> initiatePayment({
     required String orderId,
     required double amount,
@@ -20,15 +17,6 @@ class PaymentService {
     required String userId,
   }) async {
     try {
-      // Validate configuration
-      final configError = MpesaConfig.validateConfig();
-      if (configError != null) {
-        return {
-          'success': false,
-          'error': configError,
-        };
-      }
-
       // Create payment record in Firestore
       final paymentId = DateTime.now().microsecondsSinceEpoch.toString();
       final payment = Payment(
@@ -37,7 +25,7 @@ class PaymentService {
         userId: userId,
         amount: amount,
         phoneNumber: phoneNumber,
-        status: PaymentStatus.processing,
+        status: PaymentStatus.pending,
       );
 
       await FirebaseService.instance.createPayment({
@@ -50,41 +38,12 @@ class PaymentService {
         'createdAt': payment.createdAt.toIso8601String(),
       });
 
-      // Initiate STK Push
-      final stkResult = await MpesaService().initiateSTKPush(
-        phoneNumber: phoneNumber,
-        amount: amount.toInt(),
-        accountReference: MpesaConfig.generateAccountReference(orderId),
-      );
-
-      if (stkResult != null && stkResult['success'] == true) {
-        // Update payment with STK details
-        await FirebaseService.instance.firestore.collection('payments').doc(paymentId).update({
-          'transactionId': stkResult['checkoutRequestId'],
-          'status': 'processing',
-        });
-
-        // Start monitoring payment status
-        _monitorPaymentStatus(paymentId, stkResult['checkoutRequestId']);
-
-        return {
-          'success': true,
-          'paymentId': paymentId,
-          'checkoutRequestId': stkResult['checkoutRequestId'],
-          'message': stkResult['customerMessage'] ?? 'STK Push sent successfully',
-        };
-      } else {
-        // Update payment status to failed
-        await FirebaseService.instance.firestore.collection('payments').doc(paymentId).update({
-          'status': 'failed',
-          'failureReason': stkResult?['error'] ?? 'STK Push failed',
-        });
-
-        return {
-          'success': false,
-          'error': stkResult?['error'] ?? 'Failed to initiate payment',
-        };
-      }
+      // Return success with send money instructions
+      return {
+        'success': true,
+        'paymentId': paymentId,
+        'message': 'Please send KES ${amount.toStringAsFixed(0)} to 0757952937 via M-Pesa. Include your order ID $orderId in the payment description.',
+      };
     } catch (e) {
       return {
         'success': false,
@@ -93,62 +52,6 @@ class PaymentService {
     }
   }
 
-  /// Monitor payment status by periodically checking with M-Pesa
-  void _monitorPaymentStatus(String paymentId, String checkoutRequestId) {
-    _checkAttempts = 0;
-    _statusCheckTimer?.cancel();
-
-    _statusCheckTimer = Timer.periodic(
-      const Duration(seconds: MpesaConfig.queryInterval),
-      (timer) async {
-        _checkAttempts++;
-
-        try {
-          final statusResult = await MpesaService().querySTKPushStatus(
-            checkoutRequestId: checkoutRequestId,
-          );
-
-          if (statusResult != null) {
-            final resultCode = statusResult['resultCode'];
-
-            if (resultCode == '0') {
-              // Payment successful
-              await _updatePaymentStatus(
-                paymentId: paymentId,
-                status: PaymentStatus.completed,
-                mpesaReceiptNumber: statusResult['mpesaReceiptNumber'],
-                transactionId: checkoutRequestId,
-              );
-              timer.cancel();
-            } else if (resultCode != null && resultCode != '1032' && resultCode != '1037') {
-              // Payment failed (1032 = Timeout, 1037 = DS timeout)
-              await _updatePaymentStatus(
-                paymentId: paymentId,
-                status: PaymentStatus.failed,
-                failureReason: statusResult['resultDesc'] ?? 'Payment failed',
-              );
-              timer.cancel();
-            }
-          }
-
-          // Stop checking after max attempts
-          if (_checkAttempts >= MpesaConfig.maxQueryAttempts) {
-            await _updatePaymentStatus(
-              paymentId: paymentId,
-              status: PaymentStatus.pending,
-              failureReason: 'Payment status check timeout',
-            );
-            timer.cancel();
-          }
-        } catch (e) {
-          print('Error checking payment status: $e');
-          if (_checkAttempts >= MpesaConfig.maxQueryAttempts) {
-            timer.cancel();
-          }
-        }
-      },
-    );
-  }
 
   /// Update payment status in Firestore
   Future<void> _updatePaymentStatus({
@@ -223,11 +126,6 @@ class PaymentService {
     return null;
   }
 
-  /// Cancel payment monitoring
-  void cancelPaymentMonitoring() {
-    _statusCheckTimer?.cancel();
-    _statusCheckTimer = null;
-  }
 
   /// Process M-Pesa callback (for backend integration)
   Future<void> processMpesaCallback(Map<String, dynamic> callbackData) async {

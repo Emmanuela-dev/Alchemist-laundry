@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../services/local_repo.dart';
 import '../services/firebase_service.dart';
 import '../models/models.dart';
@@ -19,17 +18,18 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _loading = false;
   bool _showAdminCode = false;
 
-  void _signup() async {
+  Future<void> _signup() async {
     if (_name.text.trim().isEmpty || _phone.text.trim().isEmpty) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter your name and phone number')),
       );
       return;
     }
 
-    // Validate admin code if admin role is selected
     if (_selectedRole == UserRole.admin) {
       if (_adminCode.text.trim() != 'ADMIN123') {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Invalid admin code')),
         );
@@ -37,32 +37,25 @@ class _SignupScreenState extends State<SignupScreen> {
       }
     }
 
-    setState(() {
-      _loading = true;
-    });
+    setState(() => _loading = true);
 
     try {
       String phoneNumber = _phone.text.trim();
-      // Add country code if not present
       if (!phoneNumber.startsWith('+')) {
         phoneNumber = '+254${phoneNumber.startsWith('0') ? phoneNumber.substring(1) : phoneNumber}';
       }
 
-      // Check if Firebase is available
       if (FirebaseService.instance.ready) {
-        // Use Firebase - create user ID from phone number hash
         final userId = phoneNumber.hashCode.toString();
-
-        // Check if user already exists
         final existingUserDoc = await FirebaseService.instance.getUserProfile(userId);
         if (existingUserDoc.exists) {
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Account already exists with this phone number')),
           );
           return;
         }
 
-        // Create new user profile in Firestore
         await FirebaseService.instance.createUserDoc(userId, {
           'name': _name.text.trim(),
           'email': '',
@@ -71,7 +64,6 @@ class _SignupScreenState extends State<SignupScreen> {
           'createdAt': DateTime.now().toIso8601String(),
         });
 
-        // Create local user profile
         final user = UserProfile(
           id: userId,
           name: _name.text.trim(),
@@ -82,13 +74,11 @@ class _SignupScreenState extends State<SignupScreen> {
 
         await LocalRepo.instance.setCurrentUser(user);
 
-        // Update FCM token if available
         final token = await FirebaseService.instance.getFCMToken();
         if (token != null) {
           await FirebaseService.instance.updateUserFCMToken(userId, token);
         }
       } else {
-        // Fallback to local storage
         final userId = DateTime.now().microsecondsSinceEpoch.toString();
         final user = UserProfile(
           id: userId,
@@ -97,17 +87,13 @@ class _SignupScreenState extends State<SignupScreen> {
           phone: phoneNumber,
           role: _selectedRole,
         );
-
         await LocalRepo.instance.setCurrentUser(user);
       }
 
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Account created successfully! Please login to continue.')),
       );
-
-      // Always navigate to login after signup
       Navigator.pushReplacementNamed(context, '/login');
     } catch (e) {
       if (!mounted) return;
@@ -115,12 +101,16 @@ class _SignupScreenState extends State<SignupScreen> {
         SnackBar(content: Text('Signup failed: ${e.toString()}')),
       );
     } finally {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-        });
-      }
+      if (mounted) setState(() => _loading = false);
     }
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _phone.dispose();
+    _adminCode.dispose();
+    super.dispose();
   }
 
   @override
@@ -131,10 +121,7 @@ class _SignupScreenState extends State<SignupScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFF7FAFC),
-              Color(0xFFE2E8F0),
-            ],
+            colors: [Color(0xFFF7FAFC), Color(0xFFE2E8F0)],
           ),
         ),
         child: SafeArea(
@@ -143,7 +130,6 @@ class _SignupScreenState extends State<SignupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
                 Row(
                   children: [
                     Container(
@@ -155,7 +141,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           BoxShadow(
                             color: Colors.black.withOpacity(0.1),
                             blurRadius: 10,
-                            offset: const Offset(0, 4),
+                            offset: Offset(0, 4),
                           ),
                         ],
                       ),
@@ -190,7 +176,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
                 const SizedBox(height: 48),
 
-                // Welcome Section (similar to home page)
+                // Welcome Section
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
@@ -204,7 +190,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       BoxShadow(
                         color: const Color(0xFF667EEA).withOpacity(0.3),
                         blurRadius: 20,
-                        offset: const Offset(0, 10),
+                        offset: Offset(0, 10),
                       ),
                     ],
                   ),
@@ -270,7 +256,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       BoxShadow(
                         color: Colors.black.withOpacity(0.05),
                         blurRadius: 10,
-                        offset: const Offset(0, 4),
+                        offset: Offset(0, 4),
                       ),
                     ],
                   ),

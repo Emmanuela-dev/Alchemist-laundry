@@ -132,6 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
+        height: MediaQuery.of(context).size.height,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -142,10 +143,14 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
           ),
         ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.only(
+            top: MediaQuery.of(context).padding.top + 20,
+            left: 20.0,
+            right: 20.0,
+            bottom: 20.0,
+          ),
+          child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Header
@@ -387,7 +392,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ],
             ),
-          ),
         ),
       ),
     );
