@@ -63,7 +63,10 @@ class _HomeScreenState extends State<HomeScreen> {
     // Convert cart to OrderItems
     List<OrderItem> orderItems = [];
     cart.forEach((serviceId, quantity) {
-      final service = services.firstWhere((s) => s.id == serviceId);
+      final service = services.firstWhere(
+        (s) => s.id == serviceId,
+        orElse: () => Service(id: serviceId, title: 'Unknown Service', description: '', basePrice: 0)
+      );
       orderItems.add(OrderItem(
         name: '${service.title} (${_selectedServiceType.name})',
         quantity: quantity,

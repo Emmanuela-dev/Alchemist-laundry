@@ -191,10 +191,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           );
         }
 
-        // Open WhatsApp to primary admin first
-        await _openWhatsAppToPrimaryAdmin(orderId, cartItems, 'cart-order', orderTotal: _totalAmount);
-        // Then navigate to order details
+        // Navigate to order details first
         Navigator.pushReplacementNamed(context, '/order', arguments: {'orderId': orderId});
+        // WhatsApp will be opened from the order details screen
       } else {
         final order = await LocalRepo.instance.createOrder(
           serviceId: 'cart-order',
@@ -227,11 +226,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           );
         }
 
-        // Open WhatsApp to primary admin first
-        await _openWhatsAppToPrimaryAdmin(orderId, cartItems, 'cart-order', orderTotal: _totalAmount);
-        // Then navigate to order details
+        // Navigate to order details first
         if (!mounted) return;
         Navigator.pushReplacementNamed(context, '/order', arguments: {'orderId': orderId});
+        // WhatsApp will be opened from the order details screen
       }
     } catch (e, st) {
       // ignore: avoid_print
@@ -242,20 +240,6 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     }
   }
 
-  Future<void> _openWhatsAppToPrimaryAdmin(String orderId, List<OrderItem> items, String? serviceId, {required double orderTotal}) async {
-    final admins = await AdminNumbers.load();
-    final targets = admins.isNotEmpty ? admins : SmsConfig.adminNumbers;
-    if (targets.isEmpty) return; // nothing to do
-    final phone = targets.first.replaceAll('+', '');
-    final user = LocalRepo.instance.currentUser;
-    final serviceTitle = LocalRepo.instance.listServices().firstWhere((s) => s.id == (serviceId ?? 's1'), orElse: () => Service(id: 'unknown', title: 'Laundry Service', description: '', basePrice: 0)).title;
-    final itemsText = items.map((i) => '${i.name} x${i.quantity}').join(', ');
-    final msg = 'New order $orderId\nCustomer: ${user?.name ?? ''} ${user?.phone ?? ''}\nService: $serviceTitle\nItems: $itemsText\nTotal: KES ${orderTotal.toStringAsFixed(0)}';
-    final url = Uri.parse('https://wa.me/$phone?text=${Uri.encodeComponent(msg)}');
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {

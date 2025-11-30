@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 // using simple network tile previews instead of flutter_map to keep web builds stable
 import 'package:url_launcher/url_launcher.dart';
-import '../services/sms_config.dart';
-import '../services/admin_numbers.dart';
 import 'full_map_screen.dart';
 import 'order_tracking_screen.dart';
 import '../models/models.dart';
 import '../services/local_repo.dart';
+import '../services/firebase_service.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final String orderId;
@@ -40,8 +39,70 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _loadOrder();
+
+    // Automatically open WhatsApp after a short delay to show order details first
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted && order != null) {
+        _sendToWhatsApp();
+      }
+    });
+  }
+
+  void _loadOrder() async {
+    // First try to load from local repo
     order = LocalRepo.instance.getOrder(widget.orderId);
     comments = LocalRepo.instance.getComments(widget.orderId);
+
+    // If not found locally and Firebase is available, try Firebase
+    if (order == null && FirebaseService.instance.ready) {
+      try {
+        final orderDoc = await FirebaseService.instance.firestore
+            .collection('orders')
+            .doc(widget.orderId)
+            .get();
+
+        if (orderDoc.exists) {
+          final data = orderDoc.data() as Map<String, dynamic>;
+          final items = <OrderItem>[];
+          final itemsList = data['items'] as List<dynamic>? ?? [];
+          for (final it in itemsList) {
+            final im = it as Map<String, dynamic>;
+            items.add(OrderItem(
+              name: im['name'],
+              quantity: im['quantity'],
+              price: (im['price'] as num).toDouble()
+            ));
+          }
+
+          order = Order(
+            id: data['id'],
+            userId: data['userId'],
+            serviceId: data['serviceId'] ?? 'cart-order',
+            items: items,
+            pickupTime: DateTime.parse(data['pickupTime']),
+            deliveryTime: DateTime.parse(data['deliveryTime']),
+            instructions: data['instructions'] ?? '',
+            status: OrderStatus.values.firstWhere(
+              (v) => v.name == data['status'],
+              orElse: () => OrderStatus.pending,
+            ),
+            total: (data['total'] as num).toDouble(),
+            latitude: (data['latitude'] as num?)?.toDouble(),
+            longitude: (data['longitude'] as num?)?.toDouble(),
+            paymentMethod: data['paymentMethod'],
+            paymentStatus: data['paymentStatus'],
+          );
+
+          // Refresh UI
+          if (mounted) {
+            setState(() {});
+          }
+        }
+      } catch (e) {
+        print('Error loading order from Firebase: $e');
+      }
+    }
   }
 
   void _addComment() async {
@@ -54,10 +115,32 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     });
   }
 
+  void _sendToWhatsApp() async {
+    // Use the specific admin number for orders
+    final adminPhoneNumber = '254757952937';
+
+    // Build a richer message
+    final user = LocalRepo.instance.currentUser;
+    final itemsText = order!.items.map((i) => '${i.name} x${i.quantity}').join(', ');
+    final serviceTitle = LocalRepo.instance.listServices().firstWhere(
+      (s) => s.id == order!.serviceId,
+      orElse: () => Service(id: 'unknown', title: 'Laundry Service', description: '', basePrice: 0)
+    ).title;
+    final msg = 'New order ${order!.id}\nCustomer: ${user?.name ?? ''} ${user?.phone ?? ''}\nService: $serviceTitle\nItems: $itemsText\nTotal: KES ${order!.total.toStringAsFixed(0)}';
+    final phone = adminPhoneNumber.replaceAll('+', '');
+    final url = Uri.parse('https://wa.me/$phone?text=${Uri.encodeComponent(msg)}');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (order == null) return Scaffold(body: Center(child: Text('Order not found')));
-  final service = LocalRepo.instance.listServices().firstWhere((s) => s.id == order!.serviceId);
+  final service = LocalRepo.instance.listServices().firstWhere(
+    (s) => s.id == order!.serviceId,
+    orElse: () => Service(id: 'unknown', title: 'Laundry Service', description: '', basePrice: 0)
+  );
     return Scaffold(
       appBar: AppBar(
         title: Text('Order ${order!.id}'),
@@ -125,40 +208,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           ,
           const SizedBox(height: 12),
           ElevatedButton.icon(
-            onPressed: () async {
-              final ctx = context;
-              final scaffold = ScaffoldMessenger.of(ctx);
-              final admins = await AdminNumbers.load();
-              if (!mounted) return;
-              final targets = admins.isNotEmpty ? admins : SmsConfig.adminNumbers;
-              if (targets.isEmpty) {
-                scaffold.showSnackBar(const SnackBar(content: Text('No admin number configured')));
-                return;
-              }
-
-              // Show chooser bottom sheet
-              // capture ctx earlier to avoid build-context-across-async lint
-              // ignore: use_build_context_synchronously
-              final chosen = await showModalBottomSheet<String>(context: ctx, builder: (ctx) {
-                return Column(mainAxisSize: MainAxisSize.min, children: [
-                  const ListTile(title: Text('Send order to admin via WhatsApp')),
-                  ...targets.map((t) => ListTile(title: Text(t), leading: const Icon(Icons.person), onTap: () => Navigator.of(ctx).pop(t))),
-                  ListTile(title: const Text('Cancel'), leading: const Icon(Icons.close), onTap: () => Navigator.of(ctx).pop()),
-                ]);
-              });
-
-              if (!mounted) return;
-              if (chosen == null) return;
-
-              // Build a richer message
-              final user = LocalRepo.instance.currentUser;
-              final itemsText = order!.items.map((i) => '${i.name} x${i.quantity}').join(', ');
-              final msg = 'New order ${order!.id}\nCustomer: ${user?.name ?? ''} ${user?.phone ?? ''}\nService: ${LocalRepo.instance.listServices().firstWhere((s) => s.id == order!.serviceId).title}\nItems: $itemsText\nTotal: KES ${order!.total.toStringAsFixed(0)}';
-              final phone = chosen.replaceAll('+', '');
-              final url = Uri.parse('https://wa.me/$phone?text=${Uri.encodeComponent(msg)}');
-              if (await canLaunchUrl(url)) await launchUrl(url, mode: LaunchMode.externalApplication);
-            },
-            icon: Icon(Icons.send),
+            onPressed: _sendToWhatsApp,
+            icon: const Icon(Icons.send),
             label: const Text('Send to admin on WhatsApp'),
           ),
         ]),
