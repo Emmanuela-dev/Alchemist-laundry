@@ -3,6 +3,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'services/local_repo.dart';
 import 'services/firebase_service.dart';
 import 'services/notification_service.dart';
+import 'models/models.dart';
 import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/home_screen.dart';
@@ -59,11 +60,19 @@ Future<void> main() async {
     // ignore Firebase init errors in dev until project config is added
   }
 
-  runApp(const MyApp());
+  // Determine initial route based on current user
+  String initialRoute = '/login';
+  final currentUser = LocalRepo.instance.currentUser;
+  if (currentUser != null) {
+    initialRoute = currentUser.role == UserRole.admin ? '/admin' : '/home';
+  }
+
+  runApp(MyApp(initialRoute: initialRoute));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final String? initialRoute;
+  const MyApp({super.key, this.initialRoute});
 
   @override
   Widget build(BuildContext context) {
@@ -139,7 +148,7 @@ class MyApp extends StatelessWidget {
           hintStyle: TextStyle(color: babyBlue.withOpacity(0.7)),
         ),
       ),
-      initialRoute: '/login',
+      initialRoute: initialRoute ?? '/login',
       routes: {
         '/login': (_) => const LoginScreen(),
         '/signup': (_) => const SignupScreen(),

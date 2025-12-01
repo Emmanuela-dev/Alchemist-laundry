@@ -61,7 +61,8 @@ class LocalRepo {
       final list = jsonDecode(usersStr) as List<dynamic>;
       for (final e in list) {
         final m = e as Map<String, dynamic>;
-        final u = UserProfile(id: m['id'], name: m['name'], email: m['email'], phone: m['phone'] ?? '', address: m['address'] ?? '');
+        final role = m['role'] != null ? UserRole.values.firstWhere((r) => r.name == m['role'], orElse: () => UserRole.client) : UserRole.client;
+        final u = UserProfile(id: m['id'], name: m['name'], email: m['email'], phone: m['phone'] ?? '', address: m['address'] ?? '', role: role);
         _users[u.id] = u;
       }
     } else {
@@ -69,6 +70,12 @@ class LocalRepo {
       _users[u1.id] = u1;
       _currentUser = u1;
       await _saveUsers();
+    }
+
+    // load current user
+    final currentUserId = _prefs.getString('currentUserId');
+    if (currentUserId != null && _users.containsKey(currentUserId)) {
+      _currentUser = _users[currentUserId];
     }
 
     // load orders
@@ -127,7 +134,7 @@ class LocalRepo {
   }
 
   Future<void> _saveUsers() async {
-    final list = _users.values.map((u) => {'id': u.id, 'name': u.name, 'email': u.email, 'phone': u.phone, 'address': u.address}).toList();
+    final list = _users.values.map((u) => {'id': u.id, 'name': u.name, 'email': u.email, 'phone': u.phone, 'address': u.address, 'role': u.role.name}).toList();
     await _prefs.setString('users', jsonEncode(list));
   }
 
@@ -180,6 +187,7 @@ class LocalRepo {
     _currentUser = user;
     // Also save to users map if not already there
     _users[user.id] = user;
+    await _prefs.setString('currentUserId', user.id);
     await _saveUsers();
   }
 

@@ -191,7 +191,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           );
         }
 
-        // Navigate to order details first
+        // Navigate to order details
         Navigator.pushReplacementNamed(context, '/order', arguments: {'orderId': orderId});
         // WhatsApp will be opened from the order details screen
       } else {

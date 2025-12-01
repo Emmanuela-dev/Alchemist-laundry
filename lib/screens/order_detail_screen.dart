@@ -35,6 +35,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   List<Comment> comments = [];
   final _comment = TextEditingController();
   int _rating = 5;
+  bool _loading = true;
 
   @override
   void initState() {
@@ -76,7 +77,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           }
 
           order = Order(
-            id: data['id'],
+            id: data['id'] ?? widget.orderId,
             userId: data['userId'],
             serviceId: data['serviceId'] ?? 'cart-order',
             items: items,
@@ -93,15 +94,17 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             paymentMethod: data['paymentMethod'],
             paymentStatus: data['paymentStatus'],
           );
-
-          // Refresh UI
-          if (mounted) {
-            setState(() {});
-          }
         }
       } catch (e) {
         print('Error loading order from Firebase: $e');
       }
+    }
+
+    // Set loading to false
+    if (mounted) {
+      setState(() {
+        _loading = false;
+      });
     }
   }
 
@@ -136,7 +139,42 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (order == null) return Scaffold(body: Center(child: Text('Order not found')));
+    if (_loading) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text('Loading order details...', style: Theme.of(context).textTheme.bodyLarge),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (order == null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('Order not found', style: Theme.of(context).textTheme.headlineSmall),
+              const SizedBox(height: 8),
+              Text('The order could not be loaded. Please try again.', style: Theme.of(context).textTheme.bodyMedium),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Go Back'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
   final service = LocalRepo.instance.listServices().firstWhere(
     (s) => s.id == order!.serviceId,
     orElse: () => Service(id: 'unknown', title: 'Laundry Service', description: '', basePrice: 0)
