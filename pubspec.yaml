@@ -46,6 +46,8 @@ dependencies:
   image_picker: ^0.8.7+4
   # Location
   geolocator: ^9.0.2
+  # Google Maps Flutter package
+  google_maps_flutter: ^2.2.0
   # Local notifications so clients get notified when their clothes are ready
   # flutter_local_notifications: ^19.5.0
   # HTTP client for sending SMS via external APIs (e.g., Twilio)
@@ -69,6 +71,8 @@ dependencies:
   # Supabase for backend (Auth + Postgres)
   # supabase_flutter: ^1.10.25
   flutter_svg: ^2.0.10
+  # Lightweight charts library
+  fl_chart: ^0.69.0
 
 dev_dependencies:
   flutter_test:

@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
 import 'notification_service.dart';
 import 'sms_service.dart';
+import 'firebase_service.dart';
 
 class LocalRepo {
   LocalRepo._private();
@@ -205,6 +206,33 @@ class LocalRepo {
     _comments[id] = [];
     await _saveOrders();
     await _saveComments();
+
+    // Sync to Firebase if available
+    if (FirebaseService.instance.ready) {
+      try {
+        final orderData = {
+          'id': id,
+          'userId': _currentUser!.id,
+          'serviceId': serviceId,
+          'items': items.map((it) => {'name': it.name, 'quantity': it.quantity, 'price': it.price}).toList(),
+          'pickupTime': pickup.toIso8601String(),
+          'deliveryTime': delivery.toIso8601String(),
+          'instructions': instructions,
+          'status': order.status.name,
+          'total': total,
+          'latitude': latitude,
+          'longitude': longitude,
+          'paymentMethod': paymentMethod,
+          'paymentStatus': paymentStatus,
+          'createdAt': DateTime.now().toIso8601String(),
+        };
+        await FirebaseService.instance.createOrder(orderData);
+      } catch (e) {
+        print('Error syncing order to Firebase: $e');
+        // Continue locally even if Firebase fails
+      }
+    }
+
     // Notify admins via SMS (best-effort). Uses SmsConfig.enabled to decide.
     try {
       // Notify admins with a minimal message: order summary

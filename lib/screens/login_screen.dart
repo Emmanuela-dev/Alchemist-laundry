@@ -104,8 +104,33 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
+      // Get the user to show personalized welcome
+      final currentUser = LocalRepo.instance.currentUser;
+      final userName = currentUser?.name ?? 'User';
+
+      // Show personalized welcome message
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Welcome back to Alchemist Laundry!')),
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.celebration, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Welcome $userName! 👋',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF48BB78),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 3),
+        ),
       );
 
       // Navigate based on role

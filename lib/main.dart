@@ -14,6 +14,7 @@ import 'screens/profile_screen.dart';
 import 'screens/admin_screen.dart';
 import 'screens/admin_services_screen.dart';
 import 'screens/customer_care_screen.dart';
+import 'screens/map_view_screen.dart';
 
 // Handle background messages
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -76,52 +77,51 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Beautiful baby colors palette
-    final babyPink = const Color(0xFFFFC1CC); // Soft baby pink
-    final babyPinkLight = const Color(0xFFFFD1DC); // Lighter baby pink
-    final babyPinkDark = const Color(0xFFFFA8B8); // Darker baby pink
-    final babyBlue = const Color(0xFFB8E6FF); // Soft baby blue
-    final babyPurple = const Color(0xFFE1BEE7); // Soft baby purple
-    final babyGreen = const Color(0xFFC8E6C9); // Soft baby green
-    final babyYellow = const Color(0xFFFFF9C4); // Soft baby yellow
+    // Professional blue colors palette
+    final primaryBlue = const Color(0xFF2196F3); // Professional blue
+    final lightBlue = const Color(0xFFBBDEFB); // Light blue
+    final darkBlue = const Color(0xFF1976D2); // Dark blue
+    final accentBlue = const Color(0xFF90CAF9); // Accent blue
+    final surfaceBlue = const Color(0xFFE3F2FD); // Surface blue
+    final backgroundBlue = const Color(0xFFF3F9FF); // Background blue
 
     return MaterialApp(
       title: 'Alchemist Laundry',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.pink,
-        primaryColor: babyPink,
-        scaffoldBackgroundColor: babyYellow.withOpacity(0.1),
+        primarySwatch: Colors.blue,
+        primaryColor: primaryBlue,
+        scaffoldBackgroundColor: backgroundBlue,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: babyPink,
-          primary: babyPink,
-          secondary: babyBlue,
-          tertiary: babyPurple,
+          seedColor: primaryBlue,
+          primary: primaryBlue,
+          secondary: accentBlue,
+          tertiary: surfaceBlue,
           surface: Colors.white,
-          background: babyYellow.withOpacity(0.05),
+          background: backgroundBlue,
           brightness: Brightness.light,
         ),
         appBarTheme: AppBarTheme(
-          backgroundColor: babyPink,
-          foregroundColor: babyBlue,
+          backgroundColor: primaryBlue,
+          foregroundColor: Colors.white,
           elevation: 2,
-          shadowColor: babyPinkDark.withOpacity(0.3),
+          shadowColor: darkBlue.withOpacity(0.3),
           titleTextStyle: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: babyBlue,
+            color: Colors.white,
           ),
-          iconTheme: IconThemeData(color: babyBlue),
+          iconTheme: IconThemeData(color: Colors.white),
         ),
         floatingActionButtonTheme: FloatingActionButtonThemeData(
-          backgroundColor: babyPink,
-          foregroundColor: babyBlue,
+          backgroundColor: primaryBlue,
+          foregroundColor: Colors.white,
           elevation: 6,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: babyPink,
-            foregroundColor: babyBlue,
+            backgroundColor: primaryBlue,
+            foregroundColor: Colors.white,
             elevation: 3,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
@@ -131,21 +131,21 @@ class MyApp extends StatelessWidget {
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: babyYellow.withOpacity(0.1),
+          fillColor: backgroundBlue.withOpacity(0.5),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: babyPink.withOpacity(0.3)),
+            borderSide: BorderSide(color: primaryBlue.withOpacity(0.3)),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: babyPink.withOpacity(0.3)),
+            borderSide: BorderSide(color: primaryBlue.withOpacity(0.3)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: babyPink, width: 2),
+            borderSide: BorderSide(color: primaryBlue, width: 2),
           ),
-          labelStyle: TextStyle(color: babyBlue),
-          hintStyle: TextStyle(color: babyBlue.withOpacity(0.7)),
+          labelStyle: TextStyle(color: primaryBlue),
+          hintStyle: TextStyle(color: primaryBlue.withOpacity(0.7)),
         ),
       ),
       initialRoute: initialRoute ?? '/login',
@@ -159,6 +159,13 @@ class MyApp extends StatelessWidget {
         '/admin': (_) => const AdminScreen(),
         '/admin-services': (_) => const AdminServicesScreen(),
         '/customer-care': (_) => const CustomerCareScreen(),
+        '/map': (ctx) {
+          final args = ModalRoute.of(ctx)?.settings.arguments as Map<String, dynamic>?;
+          final lat = args == null ? null : (args['lat'] as double? ?? (args['lat'] is int ? (args['lat'] as int).toDouble() : null));
+          final lng = args == null ? null : (args['lng'] as double? ?? (args['lng'] is int ? (args['lng'] as int).toDouble() : null));
+          final label = args == null ? null : args['label'] as String?;
+          return MapViewScreen(lat: lat, lng: lng, label: label);
+        },
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/order') {
