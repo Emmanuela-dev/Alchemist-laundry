@@ -9,9 +9,9 @@ class CustomerCareScreen extends StatelessWidget {
   Future<void> _openWhatsApp(BuildContext context, String message) async {
     final encoded = Uri.encodeComponent(message);
     final url = Uri.parse('https://wa.me/$_whatsappNumber?text=$encoded');
-    if (await canLaunchUrl(url)) {
+    try {
       await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
+    } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Could not open WhatsApp')),

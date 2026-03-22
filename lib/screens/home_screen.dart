@@ -63,9 +63,9 @@ class _HomePage extends StatelessWidget {
       'Hello! I\'d like to enquire about your laundry services.',
     );
     final url = Uri.parse('https://wa.me/$_whatsappNumber?text=$message');
-    if (await canLaunchUrl(url)) {
+    try {
       await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
+    } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Could not open WhatsApp')),

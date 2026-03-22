@@ -13,9 +13,9 @@ class ServicesScreen extends StatelessWidget {
       'Hello! I\'m interested in your *$serviceName* service. Could you please provide more details?',
     );
     final url = Uri.parse('https://wa.me/$_whatsappNumber?text=$message');
-    if (await canLaunchUrl(url)) {
+    try {
       await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
+    } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Could not open WhatsApp')),
@@ -236,29 +236,7 @@ class _ServiceCard extends StatelessWidget {
             ),
           ),
 
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-            child: GestureDetector(
-              onTap: onWhatsApp,
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 9),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF25D366),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.chat_bubble_outline, color: Colors.white, size: 15),
-                    SizedBox(width: 6),
-                    Text('Book via WhatsApp',
-                        style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          const SizedBox(height: 12),
         ],
       ),
     );
