@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
 import 'notification_service.dart';
-import 'sms_service.dart';
 import 'firebase_service.dart';
 
 class LocalRepo {
@@ -186,10 +185,18 @@ class LocalRepo {
 
   Future<void> setCurrentUser(UserProfile user) async {
     _currentUser = user;
-    // Also save to users map if not already there
-    _users[user.id] = user;
+    if (!_users.containsKey(user.id)) {
+      _users[user.id] = user;
+    } else {
+      _users[user.id] = user;
+    }
     await _prefs.setString('currentUserId', user.id);
     await _saveUsers();
+  }
+
+  Future<void> clearCurrentUser() async {
+    _currentUser = null;
+    await _prefs.remove('currentUserId');
   }
 
   // Services
@@ -207,41 +214,35 @@ class LocalRepo {
     await _saveOrders();
     await _saveComments();
 
-    // Sync to Firebase if available
+    // Sync to Firebase if available (only if not already synced from create_order_screen)
     if (FirebaseService.instance.ready) {
       try {
-        final orderData = {
-          'id': id,
-          'userId': _currentUser!.id,
-          'serviceId': serviceId,
-          'items': items.map((it) => {'name': it.name, 'quantity': it.quantity, 'price': it.price}).toList(),
-          'pickupTime': pickup.toIso8601String(),
-          'deliveryTime': delivery.toIso8601String(),
-          'instructions': instructions,
-          'status': order.status.name,
-          'total': total,
-          'latitude': latitude,
-          'longitude': longitude,
-          'paymentMethod': paymentMethod,
-          'paymentStatus': paymentStatus,
-          'createdAt': DateTime.now().toIso8601String(),
-        };
-        await FirebaseService.instance.createOrder(orderData);
+        // Check if order already exists in Firebase
+        final existingDoc = await FirebaseService.instance.firestore.collection('orders').doc(id).get();
+        if (!existingDoc.exists) {
+          final orderData = {
+            'userId': _currentUser!.id,
+            'serviceId': serviceId,
+            'items': items.map((it) => {'name': it.name, 'quantity': it.quantity, 'price': it.price}).toList(),
+            'pickupTime': pickup.toIso8601String(),
+            'deliveryTime': delivery.toIso8601String(),
+            'instructions': instructions,
+            'status': order.status.name,
+            'total': total,
+            'latitude': latitude,
+            'longitude': longitude,
+            'paymentMethod': paymentMethod,
+            'paymentStatus': paymentStatus,
+            'createdAt': DateTime.now().toIso8601String(),
+          };
+          await FirebaseService.instance.firestore.collection('orders').doc(id).set(orderData);
+        }
       } catch (e) {
         print('Error syncing order to Firebase: $e');
         // Continue locally even if Firebase fails
       }
     }
 
-    // Notify admins via SMS (best-effort). Uses SmsConfig.enabled to decide.
-    try {
-      // Notify admins with a minimal message: order summary
-      final itemsText = items.map((i) => '${i.name} x${i.quantity}').join(', ');
-      final msg = 'New Order: $itemsText - Total: KES ${total.toStringAsFixed(0)}';
-      await SmsService.instance.notifyAdmins(msg);
-    } catch (e) {
-      // ignore SMS failures in local repo
-    }
     return order;
   }
 
@@ -291,9 +292,15 @@ class LocalRepo {
 
   UserProfile? findUserByPhone(String phone) {
     try {
-      return _users.values.firstWhere(
-        (user) => user.phone == phone,
-      );
+      return _users.values.firstWhere((user) => user.phone == phone);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  UserProfile? findUserByEmail(String email) {
+    try {
+      return _users.values.firstWhere((user) => user.email == email);
     } catch (e) {
       return null;
     }

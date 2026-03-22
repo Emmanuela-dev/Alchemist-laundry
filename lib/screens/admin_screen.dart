@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:fl_chart/fl_chart.dart';
 import '../services/local_repo.dart';
 import '../services/firebase_service.dart';
 import '../models/models.dart';
@@ -57,53 +56,69 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
 
     try {
       if (FirebaseService.instance.ready) {
-        // Load from Firebase for real-time data
-        final ordersSnapshot = await FirebaseService.instance.firestore.collection('orders').get();
-        orders = ordersSnapshot.docs.map((doc) {
-          final data = doc.data();
-          return Order(
-            id: doc.id,
-            userId: data['userId'] ?? '',
-            serviceId: data['serviceId'] ?? '',
-            items: (data['items'] as List<dynamic>? ?? []).map((item) => OrderItem(
-              name: item['name'] ?? '',
-              quantity: item['quantity'] ?? 1,
-              price: (item['price'] as num?)?.toDouble() ?? 0.0,
-            )).toList(),
-            pickupTime: DateTime.parse(data['pickupTime'] ?? DateTime.now().toIso8601String()),
-            deliveryTime: DateTime.parse(data['deliveryTime'] ?? DateTime.now().toIso8601String()),
-            instructions: data['instructions'] ?? '',
-            status: OrderStatus.values.firstWhere(
-              (s) => s.name == (data['status'] ?? 'pending'),
-              orElse: () => OrderStatus.pending,
-            ),
-            total: (data['total'] as num?)?.toDouble() ?? 0.0,
-            latitude: (data['latitude'] as num?)?.toDouble(),
-            longitude: (data['longitude'] as num?)?.toDouble(),
-            paymentMethod: data['paymentMethod'],
-            paymentStatus: data['paymentStatus'],
-          );
-        }).toList();
+        // Use real-time listener for Firebase
+        FirebaseService.instance.listAllOrders().listen((snapshot) {
+          if (!mounted) return;
+          
+          orders = snapshot.docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return Order(
+              id: doc.id,
+              userId: data['userId'] ?? '',
+              serviceId: data['serviceId'] ?? '',
+              items: (data['items'] as List<dynamic>? ?? []).map((item) => OrderItem(
+                name: item['name'] ?? '',
+                quantity: item['quantity'] ?? 1,
+                price: (item['price'] as num?)?.toDouble() ?? 0.0,
+              )).toList(),
+              pickupTime: DateTime.parse(data['pickupTime'] ?? DateTime.now().toIso8601String()),
+              deliveryTime: DateTime.parse(data['deliveryTime'] ?? DateTime.now().toIso8601String()),
+              instructions: data['instructions'] ?? '',
+              status: OrderStatus.values.firstWhere(
+                (s) => s.name == (data['status'] ?? 'pending'),
+                orElse: () => OrderStatus.pending,
+              ),
+              total: (data['total'] as num?)?.toDouble() ?? 0.0,
+              latitude: (data['latitude'] as num?)?.toDouble(),
+              longitude: (data['longitude'] as num?)?.toDouble(),
+              paymentMethod: data['paymentMethod'],
+              paymentStatus: data['paymentStatus'],
+            );
+          }).toList();
+
+          if (mounted) {
+            setState(() {
+              _calculateMetrics();
+              _applyFilter(_selectedFilter);
+              _isLoading = false;
+            });
+            if (!_metricsController.isCompleted) _metricsController.forward();
+            if (!_chartController.isCompleted) _chartController.forward();
+          }
+        });
       } else {
         // Fallback to local repo
         orders = LocalRepo.instance.listAllOrders();
+        _calculateMetrics();
+        _applyFilter(_selectedFilter);
+        _metricsController.forward();
+        _chartController.forward();
+        setState(() {
+          _isLoading = false;
+        });
       }
-
-      _calculateMetrics();
-      _applyFilter(_selectedFilter);
-      _metricsController.forward();
-      _chartController.forward();
     } catch (e) {
       print('Error loading admin data: $e');
       // Fallback to local data
       orders = LocalRepo.instance.listAllOrders();
       _calculateMetrics();
       _applyFilter(_selectedFilter);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
-
-    setState(() {
-      _isLoading = false;
-    });
   }
 
   void _calculateMetrics() {
@@ -270,10 +285,11 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   }
 
   Widget _buildRevenueChart() {
-    // Calculate daily revenue for the last 7 days
+    // Revenue chart placeholder - fl_chart package removed
     final now = DateTime.now();
-    final chartData = <FlSpot>[];
     
+    // Calculate total revenue for display
+    double totalRevenue = 0;
     for (int i = 6; i >= 0; i--) {
       final date = now.subtract(Duration(days: i));
       final dayStart = DateTime(date.year, date.month, date.day);
@@ -287,7 +303,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
           )
           .fold(0.0, (sum, o) => sum + o.total);
       
-      chartData.add(FlSpot((6 - i).toDouble(), dayRevenue));
+      totalRevenue += dayRevenue;
     }
 
     return AnimatedBuilder(
@@ -326,94 +342,42 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                   ],
                 ),
                 const SizedBox(height: 20),
-                SizedBox(
+                Container(
                   height: 200,
-                  child: LineChart(
-                    LineChartData(
-                      gridData: FlGridData(
-                        show: true,
-                        drawVerticalLine: false,
-                        horizontalInterval: 1000,
-                        getDrawingHorizontalLine: (value) {
-                          return FlLine(
-                            color: Colors.grey.shade200,
-                            strokeWidth: 1,
-                          );
-                        },
-                      ),
-                      titlesData: FlTitlesData(
-                        show: true,
-                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 30,
-                            interval: 1,
-                            getTitlesWidget: (value, meta) {
-                              const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                              if (value.toInt() >= 0 && value.toInt() < days.length) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(top: 8),
-                                  child: Text(
-                                    days[value.toInt()],
-                                    style: const TextStyle(fontSize: 10, color: Color(0xFF718096)),
-                                  ),
-                                );
-                              }
-                              return const SizedBox.shrink();
-                            },
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF667EEA).withOpacity(0.1),
+                        const Color(0xFF764BA2).withOpacity(0.1),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.show_chart,
+                          size: 48,
+                          color: Color(0xFF667EEA),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'KES ${totalRevenue.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2D3748),
                           ),
                         ),
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 45,
-                            interval: 2000,
-                            getTitlesWidget: (value, meta) {
-                              return Text(
-                                '${(value / 1000).toStringAsFixed(1)}K',
-                                style: const TextStyle(fontSize: 10, color: Color(0xFF718096)),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                      borderData: FlBorderData(show: false),
-                      minX: 0,
-                      maxX: 6,
-                      minY: 0,
-                      maxY: chartData.isEmpty ? 5000 : chartData.map((e) => e.y).reduce((a, b) => a > b ? a : b) * 1.2,
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: chartData,
-                          isCurved: true,
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
-                          ),
-                          barWidth: 4,
-                          isStrokeCapRound: true,
-                          dotData: FlDotData(
-                            show: true,
-                            getDotPainter: (spot, percent, barData, index) {
-                              return FlDotCirclePainter(
-                                radius: 4,
-                                color: Colors.white,
-                                strokeWidth: 2,
-                                strokeColor: const Color(0xFF667EEA),
-                              );
-                            },
-                          ),
-                          belowBarData: BarAreaData(
-                            show: true,
-                            gradient: LinearGradient(
-                              colors: [
-                                const Color(0xFF667EEA).withOpacity(0.3),
-                                const Color(0xFF667EEA).withOpacity(0.0),
-                              ],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                            ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          '7-Day Revenue',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF718096),
                           ),
                         ),
                       ],
@@ -762,14 +726,23 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                                       try {
                                         if (FirebaseService.instance.ready) {
                                           await FirebaseService.instance.updateOrderStatus(o.id, s.name);
+                                          // Also update local repo
+                                          await LocalRepo.instance.updateOrderStatus(o.id, s);
                                         } else {
                                           await LocalRepo.instance.updateOrderStatus(o.id, s);
                                         }
-                                        _refresh();
+                                        // No need to call _refresh() as real-time listener will update automatically
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Order status updated to ${s.name}')),
+                                          );
+                                        }
                                       } catch (e) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('Failed to update status: $e')),
-                                        );
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Failed to update status: $e')),
+                                          );
+                                        }
                                       }
                                     },
                                     itemBuilder: (ctx) => OrderStatus.values.map((s) =>

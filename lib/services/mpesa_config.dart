@@ -20,13 +20,13 @@ class MpesaConfig {
   // Your business details - UPDATE THESE VALUES
   static const String businessShortCode = '174379'; // Sandbox test short code
   static const String passKey = 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919'; // Sandbox test passkey
-  static const String callbackUrl = ' https://unarraigned-nonuniquely-alannah.ngrok-free.dev '; // Replace with your ngrok URL
+  static const String callbackUrl = 'https://unarraigned-nonuniquely-alannah.ngrok-free.dev/mpesa/callback'; // Replace with your ngrok URL
 
   // Party B (usually same as short code for PayBill)
   static String get partyB => businessShortCode;
 
   // Account Reference (can be order ID or customer reference)
-  static String generateAccountReference(String orderId) => 'BL-$orderId'; // BL for Bubble Laundry
+  static String generateAccountReference(String orderId) => 'AL-$orderId'; // AL for Alchemist Laundry
 
   // Transaction Description
   static const String transactionDesc = 'Alchemist Laundry Service Payment';
@@ -38,8 +38,8 @@ class MpesaConfig {
 
   // Validation
   static bool get isConfigured =>
-       consumerKey.isNotEmpty && consumerKey != 'cEPGXPd63YKv70uyrnpQSbcANNkI0mxu8xHae2KaTKp4D88B' &&
-       consumerSecret.isNotEmpty && consumerSecret != 'qL3GJ9iVV9EngrD9KZ7S4kWQ59IEfFXHzbtY30APUMjh1H8bhNsd6AH1Ee4jNRT8' &&
+       consumerKey.isNotEmpty && consumerKey != 'YOUR_CONSUMER_KEY' &&
+       consumerSecret.isNotEmpty && consumerSecret != 'YOUR_CONSUMER_SECRET' &&
        businessShortCode.isNotEmpty && businessShortCode != 'YOUR_BUSINESS_SHORT_CODE' &&
        passKey.isNotEmpty && passKey != 'YOUR_PASS_KEY' &&
        callbackUrl.isNotEmpty && callbackUrl != 'https://your-ngrok-url.ngrok.io/mpesa/callback';

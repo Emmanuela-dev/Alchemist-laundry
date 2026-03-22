@@ -71,8 +71,6 @@ dependencies:
   # Supabase for backend (Auth + Postgres)
   # supabase_flutter: ^1.10.25
   flutter_svg: ^2.0.10
-  # Lightweight charts library
-  fl_chart: ^0.69.0
 
 dev_dependencies:
   flutter_test:

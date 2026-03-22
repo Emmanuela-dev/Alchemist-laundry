@@ -3,18 +3,10 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'services/local_repo.dart';
 import 'services/firebase_service.dart';
 import 'services/notification_service.dart';
-import 'models/models.dart';
 import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/home_screen.dart';
-import 'screens/create_order_screen.dart';
-import 'screens/orders_screen.dart';
-import 'screens/order_detail_screen.dart';
 import 'screens/profile_screen.dart';
-import 'screens/admin_screen.dart';
-import 'screens/admin_services_screen.dart';
-import 'screens/customer_care_screen.dart';
-import 'screens/map_view_screen.dart';
 
 // Handle background messages
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -61,12 +53,8 @@ Future<void> main() async {
     // ignore Firebase init errors in dev until project config is added
   }
 
-  // Determine initial route based on current user
+  // Always start with login screen for new sessions
   String initialRoute = '/login';
-  final currentUser = LocalRepo.instance.currentUser;
-  if (currentUser != null) {
-    initialRoute = currentUser.role == UserRole.admin ? '/admin' : '/home';
-  }
 
   runApp(MyApp(initialRoute: initialRoute));
 }
@@ -77,75 +65,80 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Professional blue colors palette
-    final primaryBlue = const Color(0xFF2196F3); // Professional blue
-    final lightBlue = const Color(0xFFBBDEFB); // Light blue
-    final darkBlue = const Color(0xFF1976D2); // Dark blue
-    final accentBlue = const Color(0xFF90CAF9); // Accent blue
-    final surfaceBlue = const Color(0xFFE3F2FD); // Surface blue
-    final backgroundBlue = const Color(0xFFF3F9FF); // Background blue
+    const primaryColor = Color(0xFFE91E8C);   // Hot pink
+    const secondaryColor = Color(0xFFFF80AB);  // Light pink
+    const accentColor = Color(0xFFFF4081);     // Pink accent
 
     return MaterialApp(
       title: 'Alchemist Laundry',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
-        primaryColor: primaryBlue,
-        scaffoldBackgroundColor: backgroundBlue,
+        useMaterial3: true,
+        primaryColor: primaryColor,
+        scaffoldBackgroundColor: const Color(0xFFFFF0F5),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: primaryBlue,
-          primary: primaryBlue,
-          secondary: accentBlue,
-          tertiary: surfaceBlue,
+          seedColor: primaryColor,
+          primary: primaryColor,
+          secondary: secondaryColor,
+          tertiary: accentColor,
           surface: Colors.white,
-          background: backgroundBlue,
+          background: const Color(0xFFFFF0F5),
           brightness: Brightness.light,
         ),
-        appBarTheme: AppBarTheme(
-          backgroundColor: primaryBlue,
-          foregroundColor: Colors.white,
-          elevation: 2,
-          shadowColor: darkBlue.withOpacity(0.3),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.transparent,
+          foregroundColor: Color(0xFF880E4F),
+          elevation: 0,
+          centerTitle: true,
           titleTextStyle: TextStyle(
-            fontSize: 20,
+            fontSize: 22,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Color(0xFF880E4F),
+            letterSpacing: 0.5,
           ),
-          iconTheme: IconThemeData(color: Colors.white),
+          iconTheme: IconThemeData(color: primaryColor),
         ),
         floatingActionButtonTheme: FloatingActionButtonThemeData(
-          backgroundColor: primaryBlue,
+          backgroundColor: primaryColor,
           foregroundColor: Colors.white,
-          elevation: 6,
+          elevation: 8,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: primaryBlue,
+            backgroundColor: primaryColor,
             foregroundColor: Colors.white,
-            elevation: 3,
+            elevation: 4,
+            shadowColor: primaryColor.withOpacity(0.4),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
           ),
+        ),
+        cardTheme: CardThemeData(
+          elevation: 4,
+          shadowColor: Colors.black.withOpacity(0.1),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          color: Colors.white,
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: backgroundBlue.withOpacity(0.5),
+          fillColor: Colors.white,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: primaryBlue.withOpacity(0.3)),
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: Color(0xFFFFB3D1)),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: primaryBlue.withOpacity(0.3)),
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: Colors.pink.shade100),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: primaryBlue, width: 2),
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: primaryColor, width: 2),
           ),
-          labelStyle: TextStyle(color: primaryBlue),
-          hintStyle: TextStyle(color: primaryBlue.withOpacity(0.7)),
+          labelStyle: const TextStyle(color: primaryColor),
+          hintStyle: TextStyle(color: Colors.pink.shade200),
         ),
       ),
       initialRoute: initialRoute ?? '/login',
@@ -153,30 +146,7 @@ class MyApp extends StatelessWidget {
         '/login': (_) => const LoginScreen(),
         '/signup': (_) => const SignupScreen(),
         '/home': (_) => const HomeScreen(),
-        '/create-order': (_) => const CreateOrderScreen(),
-        '/orders': (_) => const OrdersScreen(),
         '/profile': (_) => const ProfileScreen(),
-        '/admin': (_) => const AdminScreen(),
-        '/admin-services': (_) => const AdminServicesScreen(),
-        '/customer-care': (_) => const CustomerCareScreen(),
-        '/map': (ctx) {
-          final args = ModalRoute.of(ctx)?.settings.arguments as Map<String, dynamic>?;
-          final lat = args == null ? null : (args['lat'] as double? ?? (args['lat'] is int ? (args['lat'] as int).toDouble() : null));
-          final lng = args == null ? null : (args['lng'] as double? ?? (args['lng'] is int ? (args['lng'] as int).toDouble() : null));
-          final label = args == null ? null : args['label'] as String?;
-          return MapViewScreen(lat: lat, lng: lng, label: label);
-        },
-      },
-      onGenerateRoute: (settings) {
-        if (settings.name == '/order') {
-          final args = settings.arguments as Map<String, dynamic>?;
-          final orderId = args?['orderId'] as String?;
-          if (orderId != null) {
-            return MaterialPageRoute(
-                builder: (_) => OrderDetailScreen(orderId: orderId));
-          }
-        }
-        return null;
       },
     );
   }

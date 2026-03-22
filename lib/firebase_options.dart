@@ -49,11 +49,11 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyD_example_android_api_key_here',
-    appId: '1:123456789:android:abcdef123456',
-    messagingSenderId: '123456789',
-    projectId: 'alchemist-laundry',
-    storageBucket: 'alchemist-laundry.appspot.com',
+    apiKey: 'AIzaSyD502Gip1xyrnQ7fS_rxYWrIUNQBDLqse4',
+    appId: '1:145197792263:android:726a542b0dd22fa68efea2',
+    messagingSenderId: '145197792263',
+    projectId: 'alchemistlaundry',
+    storageBucket: 'alchemistlaundry.appspot.com',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(

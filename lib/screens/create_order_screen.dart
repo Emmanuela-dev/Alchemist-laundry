@@ -3,9 +3,6 @@ import '../services/local_repo.dart';
 import '../models/models.dart';
 import '../services/firebase_service.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../services/admin_numbers.dart';
-import '../services/sms_config.dart';
 import '../screens/home_screen.dart'; // For ServiceType
 import '../services/payment_service.dart';
 import '../screens/location_picker_screen.dart';
@@ -31,6 +28,11 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   LatLng? _selectedLocation;
 
   @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
@@ -38,6 +40,108 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       cartItems = args['cartItems'] as List<OrderItem>? ?? [];
       serviceType = args['serviceType'] as ServiceType?;
     }
+  }
+
+  Future<String?> _showPhoneNumberDialog() async {
+    final TextEditingController phoneController = TextEditingController();
+    final user = FirebaseService.instance.auth.currentUser;
+    final currentUser = LocalRepo.instance.currentUser;
+    
+    // Pre-fill with existing phone number if available
+    String existingPhone = user?.phoneNumber ?? currentUser?.phone ?? '';
+    if (existingPhone.startsWith('+254')) {
+      existingPhone = '0${existingPhone.substring(4)}';
+    }
+    phoneController.text = existingPhone;
+
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.phone_android, color: Color(0xFF48BB78)),
+              SizedBox(width: 8),
+              Text('M-Pesa Phone Number'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Enter your M-Pesa phone number to complete payment:',
+                style: TextStyle(fontSize: 14, color: Color(0xFF718096)),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  labelText: 'Phone Number',
+                  hintText: '0712345678',
+                  prefixIcon: const Icon(Icons.phone, color: Color(0xFF48BB78)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF48BB78)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF48BB78).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 16, color: Color(0xFF48BB78)),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'You will receive an M-Pesa prompt to enter your PIN',
+                        style: TextStyle(fontSize: 12, color: Color(0xFF2D3748)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(null),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final phone = phoneController.text.trim();
+                if (phone.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a phone number')),
+                  );
+                  return;
+                }
+                Navigator.of(context).pop(phone);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF48BB78),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Continue', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   double get _totalAmount {
@@ -113,9 +217,12 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       String orderId;
       if (FirebaseService.instance.ready) {
         final user = FirebaseService.instance.auth.currentUser;
-        final doc = await FirebaseService.instance.createOrder({
-          'userId': user?.uid ?? LocalRepo.instance.currentUser?.id,
-          'serviceId': 'cart-order', // Generic service ID for cart orders
+        final currentUser = LocalRepo.instance.currentUser;
+        final userId = user?.uid ?? currentUser?.id ?? 'unknown';
+        
+        final orderData = {
+          'userId': userId,
+          'serviceId': 'cart-order',
           'serviceType': serviceType?.name ?? 'washFold',
           'items': cartItems.map((e) => {'name': e.name, 'quantity': e.quantity, 'price': e.price}).toList(),
           'pickupTime': pickup.toIso8601String(),
@@ -127,57 +234,34 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           'status': 'pending',
           'paymentMethod': _selectedPaymentMethod.name,
           'paymentStatus': _selectedPaymentMethod == PaymentMethod.cash ? 'completed' : 'pending',
-          'placedAt': DateTime.now().toIso8601String(),
-        });
+          'createdAt': DateTime.now().toIso8601String(),
+        };
+        
+        final doc = await FirebaseService.instance.createOrder(orderData);
         orderId = doc.id;
+        
+        // Also save to local repo for offline access
+        await LocalRepo.instance.createOrder(
+          serviceId: 'cart-order',
+          items: cartItems,
+          pickup: pickup,
+          delivery: delivery,
+          instructions: _instructions.text,
+          latitude: lat,
+          longitude: lng,
+          isCartOrder: true,
+          paymentMethod: _selectedPaymentMethod.name,
+          paymentStatus: _selectedPaymentMethod == PaymentMethod.cash ? 'completed' : 'pending'
+        );
 
         // Handle payment based on selected method
         if (_selectedPaymentMethod == PaymentMethod.mpesa) {
-          final phoneNumber = user?.phoneNumber ?? LocalRepo.instance.currentUser?.phone ?? '';
-
-          if (phoneNumber.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Phone number required for M-Pesa payment. Please update your profile.'),
-                duration: Duration(seconds: 5),
-              ),
-            );
-          } else {
-            try {
-              // Try to initiate M-Pesa payment
-              final paymentResult = await PaymentService().initiatePayment(
-                orderId: orderId,
-                amount: _totalAmount,
-                phoneNumber: phoneNumber,
-                userId: user?.uid ?? LocalRepo.instance.currentUser?.id ?? '',
-              );
-
-              if (paymentResult['success'] == true) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(paymentResult['message'] ?? 'Please send payment to 0757952937 via M-Pesa'),
-                    duration: const Duration(seconds: 7),
-                  ),
-                );
-              } else {
-                // Payment initiation failed, but order is still created
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Order created. Payment setup failed: ${paymentResult['error'] ?? 'Unknown error'}. Our team will contact you.'),
-                    duration: const Duration(seconds: 7),
-                  ),
-                );
-              }
-            } catch (e) {
-              // Payment failed, but order is still created
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Order created. M-Pesa setup failed: $e. Our team will contact you for payment.'),
-                  duration: const Duration(seconds: 7),
-                ),
-              );
-            }
-          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Order received! M-Pesa payment instructions will be sent to your phone.'),
+              duration: Duration(seconds: 4),
+            ),
+          );
         } else if (_selectedPaymentMethod == PaymentMethod.cash) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -187,13 +271,15 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           );
         } else if (_selectedPaymentMethod == PaymentMethod.card) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Card payment coming soon! Order placed for cash payment.')),
+            const SnackBar(
+              content: Text('✅ Order received! Card payment instructions will be sent to you.'),
+              duration: Duration(seconds: 4),
+            ),
           );
         }
 
         // Navigate to order details
         Navigator.pushReplacementNamed(context, '/order', arguments: {'orderId': orderId});
-        // WhatsApp will be opened from the order details screen
       } else {
         final order = await LocalRepo.instance.createOrder(
           serviceId: 'cart-order',
@@ -226,13 +312,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           );
         }
 
-        // Navigate to order details first
         if (!mounted) return;
         Navigator.pushReplacementNamed(context, '/order', arguments: {'orderId': orderId});
-        // WhatsApp will be opened from the order details screen
       }
     } catch (e, st) {
-      // ignore: avoid_print
       print('Create order failed: $e\n$st');
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to place order: $e')));
     } finally {

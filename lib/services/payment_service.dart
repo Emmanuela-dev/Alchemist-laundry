@@ -9,7 +9,7 @@ class PaymentService {
   factory PaymentService() => _instance;
   PaymentService._internal();
 
-  /// Initiate M-Pesa payment for an order (Send Money method)
+  /// Initiate M-Pesa payment with actual STK Push
   Future<Map<String, dynamic>> initiatePayment({
     required String orderId,
     required double amount,
@@ -17,6 +17,9 @@ class PaymentService {
     required String userId,
   }) async {
     try {
+      // Generate unique reference
+      final reference = 'ORDER_${orderId}_${DateTime.now().millisecondsSinceEpoch}';
+
       // Create payment record in Firestore
       final paymentId = DateTime.now().microsecondsSinceEpoch.toString();
       final payment = Payment(
@@ -26,24 +29,60 @@ class PaymentService {
         amount: amount,
         phoneNumber: phoneNumber,
         status: PaymentStatus.pending,
+        transactionId: reference,
       );
 
-      await FirebaseService.instance.createPayment({
-        'id': payment.id,
-        'orderId': payment.orderId,
-        'userId': payment.userId,
-        'amount': payment.amount,
-        'phoneNumber': payment.phoneNumber,
-        'status': payment.status.name,
-        'createdAt': payment.createdAt.toIso8601String(),
-      });
+      if (FirebaseService.instance.ready) {
+        await FirebaseService.instance.createPayment({
+          'id': payment.id,
+          'orderId': payment.orderId,
+          'userId': payment.userId,
+          'amount': payment.amount,
+          'phoneNumber': payment.phoneNumber,
+          'status': payment.status.name,
+          'transactionId': reference,
+          'createdAt': payment.createdAt.toIso8601String(),
+        });
+      }
 
-      // Return success with send money instructions
-      return {
-        'success': true,
-        'paymentId': paymentId,
-        'message': 'Please send KES ${amount.toStringAsFixed(0)} to 0757952937 via M-Pesa. Include your order ID $orderId in the payment description.',
-      };
+      // Initiate M-Pesa STK Push
+      final mpesaResult = await MpesaService().initiateSTKPush(
+        phoneNumber: phoneNumber,
+        amount: amount.toInt(),
+        accountReference: reference,
+      );
+
+      if (mpesaResult != null && mpesaResult['success'] == true) {
+        // Update payment with checkout request ID
+        if (FirebaseService.instance.ready) {
+          await FirebaseService.instance.firestore.collection('payments').doc(paymentId).update({
+            'checkoutRequestId': mpesaResult['checkoutRequestId'],
+            'merchantRequestId': mpesaResult['merchantRequestId'],
+            'status': PaymentStatus.processing.name,
+          });
+        }
+
+        return {
+          'success': true,
+          'paymentId': paymentId,
+          'checkoutRequestId': mpesaResult['checkoutRequestId'],
+          'message': mpesaResult['customerMessage'] ?? 'Payment initiated successfully',
+        };
+      } else {
+        // Update payment status to failed
+        if (FirebaseService.instance.ready) {
+          await _updatePaymentStatus(
+            paymentId: paymentId,
+            status: PaymentStatus.failed,
+            failureReason: mpesaResult?['error'] ?? 'STK Push failed',
+          );
+        }
+
+        return {
+          'success': false,
+          'error': mpesaResult?['error'] ?? 'Payment initiation failed',
+        };
+      }
     } catch (e) {
       return {
         'success': false,
